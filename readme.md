@@ -1,22 +1,20 @@
+# Concept
 
-Concept
-#######
 A simple MicroPython script to turn an ESP32 with oled into smart watch.
 
 Currently it can connect to internet, get the weather and time.
 Next, Il be adding access to Gmail using OAuth2ForDevices from Google and a script to save unread mail to Google Drive.
 
-Setup
-=====
+## Setup
 
-0 - Install MicroPython on your board.
-1 - In the consts_exemple.py file, replace the NTW_LIST, WEATHER_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET values with yours.
-2 - Rename the consts_exemple.py into consts.py.
-3 - Upload the consts.py and the python files in the Libs folder at the root directory of your ESP32. You can use Ampy program to do so.
-4 - Run the main.py, you can use Ampy. For testing is like to use Esplorer.
+* Install MicroPython on your board.
+* In the consts_exemple.py file, replace the NTW_LIST, WEATHER_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET values with yours.
+* Rename the consts_exemple.py into consts.py.
+* Upload the consts.py and the python files in the Libs folder at the root directory of your ESP32. You can use Ampy program to do so.
+* Run the main.py, you can use Ampy. For testing is like to use Esplorer.
 
-Working boards
-==============
+## Working boards
+
 
 Large one
 ---------
