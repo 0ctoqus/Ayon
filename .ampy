@@ -1,0 +1,6 @@
+# Example .ampy file
+# Please fill in your own port, baud rate, and delay
+AMPY_PORT=/dev/ttyS3
+#AMPY_PORT=COM4
+AMPY_BAUD=115200
+AMPY_DELAY=0
