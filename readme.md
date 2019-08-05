@@ -18,13 +18,12 @@ NTW_LIST, WEATHER_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 
 ## Working boards
 
+### Large one
 
-Large one
----------
 https://www.banggood.com/Geekcreit-ESP32-OLED-Module-For-Arduino-ESP32-OLED-WiFi-bluetooth-Dual-ESP-32-ESP-32S-ESP8266-p-1148119.html
 
-Small one
----------
+### Small one
+
 https://eu.banggood.com/LILYGO-TTGO-16M-bytes-128M-Bit-Pro-ESP32-OLED-V2_0-Display-WiFi-bluetooth-ESP-32-Module-For-Arduino-p-1205876.html
 
 The oled is not connected to the standard I2C pins, its SDA pin is 4 and SCL pin is 15.
@@ -35,3 +34,9 @@ Dimensions:
 25.5mm height
 50mm width
 5.75mm thickness
+
+## Untested boards with potential
+
+### Smallest ones
+
+https://www.banggood.com/X-8266-ESP-WROOM-02-ESP32-Rev1-WiFi-bluetooth-Module-OLED-IOT-Electronics-Starter-Kit-p-1272172.html?rmmds=search&ID=511646&cur_warehouse=CN
