@@ -659,6 +659,21 @@ def main():
     # https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
     # _thread.start_new_thread(ok, ("in thread",))\
 
+    # https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
+    import uasyncio as asyncio
+
+    async def bar():
+        count = 0
+        while True:
+            count += 1
+            print(count)
+            await asyncio.sleep(1)  # Pause 1s
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(bar())  # Schedule ASAP
+    loop.run_forever()
+    print("here")
+
     while True:
         now = utime.time()
         is_connected = ntw.check_connection(now)
