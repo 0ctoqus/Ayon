@@ -2,6 +2,8 @@
 
 A simple MicroPython script to turn an ESP32 with oled into smart watch.
 
+![Alt text](Static/screen_cap.png?raw=true "Ayon screen")
+
 Currently it can connect to internet, get the weather and time.
 Next, Il be adding access to Gmail using OAuth2ForDevices from Google and a script to save unread mail to Google Drive.
 
