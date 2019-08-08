@@ -99,7 +99,7 @@ class Weather(Screen_element):
 
     def get(self, now):
         if self.get_time_diff(now) or self.current_temperature is None:
-            print("Getting weather")
+            print("Getting weather", self.current_temperature)
             WEATHER_data = self.ntw.request("GET", self.complete_url)
             print("Weather response =", WEATHER_data)
 
