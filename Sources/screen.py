@@ -147,7 +147,7 @@ class Screen_Handler:
         x1, y1, string = elem
         x1 = self.width_to_pixel(x1)
         y1 = self.height_to_pixel(y1)
-        x2 = len(string) * self.char_width
+        x2 = (len(string) + 1) * self.char_width
         y2 = self.char_height
         self.reset_zone(x1, y1, x2, y2)
         self.oled.text(string, x1, y1)
