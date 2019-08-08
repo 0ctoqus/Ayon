@@ -2,21 +2,28 @@
 import network
 from urequests import request
 import ujson
+import utime
+
+# Local libs
+import uasyncio as asyncio
 
 # Local scripts
 from screen import Screen_element
 import consts as const
 
 
-class Network(Screen_element):
+class Network:
     def __init__(self, sc, max_time_check):
-        Screen_element.__init__(self, None, sc, max_time_check)
+        # Screen_element.__init__(self, None, sc, max_time_check)
+        self.sc = sc
+        self.max_time_check = max_time_check
         self.ip = None
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
         self.trying_to_connect = False
         self.ssid = None
         self.pswd = None
+        self.connected = False
 
     def request(self, request_type, url, data=None, headers={}):
         if self.wlan.isconnected():
@@ -62,15 +69,9 @@ class Network(Screen_element):
 
         return self.ssid
 
-    def check_connection(self, now):
+    def check_connection(self):
         # Check if we have to check for connection
-        if (
-            self.get_time_diff(now)
-            or not self.wlan.isconnected()
-            or self.trying_to_connect
-        ):
-            # print("checking connection")
-            self.last_time_check = now
+        if not self.wlan.isconnected() or self.trying_to_connect:
 
             # If not connected try connecting
             if not self.wlan.isconnected() and not self.trying_to_connect:
@@ -89,3 +90,15 @@ class Network(Screen_element):
                 self.trying_to_connect = False
 
         return self.wlan.isconnected()
+
+    def get(self):
+        self.connected = self.check_connection()
+
+    async def get_async(self):
+        while True:
+            if not self.connected and self.get():
+                wait_time = self.max_time_check * 1000
+                print("Connection set")
+            else:
+                wait_time = const.MAIN_CYCLE_TIME * 1000
+            await asyncio.sleep_ms(int(wait_time))

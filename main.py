@@ -13,12 +13,14 @@ from screen import Screen_Handler
 from internet import Network
 import consts as const
 
-# import _thread
-# import framebuf
 
 # https://docs.python.org/3.5/library/_thread.html#module-_thread
 # https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
 # _thread.start_new_thread(google.get, (now,))
+
+# https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
+# https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
+# https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
 
 
 class Clock(Screen_element):
@@ -34,15 +36,15 @@ class Clock(Screen_element):
             unix_timestamp = (
                 int(time_data["unixtime"]) - 946684800 + 3600 * const.CLOCK_UTC_OFFSET
             )
+            is_set = True
         else:
             unix_timestamp = 0
+            is_set = False
         self.tm = utime.localtime(unix_timestamp)
         machine.RTC().datetime(self.tm[0:3] + (0,) + self.tm[3:6] + (0,))
+        return is_set
 
-    def get(self, now):
-        if self.get_time_diff(now) or self.tm is None:
-            self.set()
-
+    def get(self):
         localtime = utime.localtime()
         date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
         time = (
@@ -53,26 +55,17 @@ class Clock(Screen_element):
             + "%02d" % localtime[5]
         )
         self.sc.set_memory(
-            name="date", elem_type="str", content=(1, 0, time + " " + date)
+            name="date", elem_type="str", content=(1, 0, time + " " + date), delete=True
         )
 
-    async def toggle_get_async():
+    async def get_async(self):
+        next_check = 0
         while True:
-            await asyncio.sleep_ms(const.MAIN_CYCLE_TIME)
-            if self.get_time_diff(utime.time()) or self.tm is None:
-                self.set()
-            localtime = utime.localtime()
-            date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
-            time = (
-                "%02d" % localtime[3]
-                + ":"
-                + "%02d" % localtime[4]
-                + ":"
-                + "%02d" % localtime[5]
-            )
-            self.sc.set_memory(
-                name="date", elem_type="str", content=(1, 0, time + " " + date)
-            )
+            if self.ntw.connected and utime.time() >= next_check:
+                if self.set():
+                    next_check = utime.time() + self.max_time_check
+            self.get()
+            await asyncio.sleep_ms(int(const.MAIN_CYCLE_TIME * 1000))
 
 
 class Weather(Screen_element):
@@ -97,52 +90,51 @@ class Weather(Screen_element):
             9: "rain",
         }
 
-    def get(self, now):
-        if self.get_time_diff(now) or self.current_temperature is None:
-            print("Getting weather", self.current_temperature)
-            WEATHER_data = self.ntw.request("GET", self.complete_url)
-            print("Weather response =", WEATHER_data)
+    def get(self):
+        print("Getting weather")
+        WEATHER_data = self.ntw.request("GET", self.complete_url)
+        print("Weather response =", WEATHER_data)
 
-            if WEATHER_data is not None and WEATHER_data["cod"] != "404":
-                self.WEATHER_description = WEATHER_data["weather"][0]["description"]
-                self.WEATHER_id = WEATHER_data["weather"][0]["id"]
-                self.current_temperature = round(WEATHER_data["main"]["temp"] - 273.15)
-                self.current_pressure = WEATHER_data["main"]["pressure"]
-                self.current_humidity = WEATHER_data["main"]["humidity"]
+        if WEATHER_data is not None and WEATHER_data["cod"] != "404":
+            self.WEATHER_description = WEATHER_data["weather"][0]["description"]
+            self.WEATHER_id = WEATHER_data["weather"][0]["id"]
+            self.current_temperature = round(WEATHER_data["main"]["temp"] - 273.15)
+            self.current_pressure = WEATHER_data["main"]["pressure"]
+            self.current_humidity = WEATHER_data["main"]["humidity"]
 
-                if self.WEATHER_id == 800:
-                    self.pixel_art = "clear"
-                elif int(self.WEATHER_id / 100) in self.id_options:
-                    self.pixel_art = self.id_options[int(self.WEATHER_id / 100)]
-                else:
-                    self.pixel_art = "cross"
+            if self.WEATHER_id == 800:
+                self.pixel_art = "clear"
+            elif int(self.WEATHER_id / 100) in self.id_options:
+                self.pixel_art = self.id_options[int(self.WEATHER_id / 100)]
             else:
-                print("City Not Found")
-                self.WEATHER_description = "None"
-                self.WEATHER_id = 0
-                self.current_temperature = 0
-                self.current_pressure = 0
-                self.current_humidity = 0
                 self.pixel_art = "cross"
+        else:
+            print("City Not Found")
+            self.WEATHER_description = "None"
+            self.WEATHER_id = 0
+            self.current_temperature = 0
+            self.current_pressure = 0
+            self.current_humidity = 0
+            self.pixel_art = "cross"
 
-            temp_str = str(self.current_temperature)
-            y = 7
-            self.sc.set_memory(
-                name="WEATHER_art", elem_type="pixel", content=(0, y, self.pixel_art)
-            )
-            self.sc.set_memory(
-                name="WEATHER_temp", elem_type="str", content=(1, y, temp_str)
-            )
-            self.sc.set_memory(
-                name="WEATHER_temp_type",
-                elem_type="pixel",
-                content=(1 + len(temp_str), y, "celcius"),
-            )
-            self.sc.set_memory(
-                name="WEATHER_humidity",
-                elem_type="str",
-                content=(2 + len(temp_str), y, str(self.current_humidity) + "%"),
-            )
+        temp_str = str(self.current_temperature)
+        y = 7
+        self.sc.set_memory(
+            name="WEATHER_art", elem_type="pixel", content=(0, y, self.pixel_art)
+        )
+        self.sc.set_memory(
+            name="WEATHER_temp", elem_type="str", content=(1, y, temp_str)
+        )
+        self.sc.set_memory(
+            name="WEATHER_temp_type",
+            elem_type="pixel",
+            content=(1 + len(temp_str), y, "celcius"),
+        )
+        self.sc.set_memory(
+            name="WEATHER_humidity",
+            elem_type="str",
+            content=(2 + len(temp_str), y, str(self.current_humidity) + "%"),
+        )
 
 
 class Google(Screen_element):
@@ -362,10 +354,6 @@ class Google(Screen_element):
                     )
 
 
-# async def killer(duration):
-#    await asyncio.sleep(duration)
-
-
 def main():
     sc = Screen_Handler()
     ntw = Network(sc, const.NTW_CHECK_TIME)
@@ -397,26 +385,15 @@ def main():
         ),
     )
 
-    # https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
-    # https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
-    # https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
+    loop = asyncio.get_event_loop()
 
-    # loop = asyncio.get_event_loop()
-    # loop.create_task(clock.toggle_get_async())
-    # loop.run_until_complete(killer(10))
+    loop.create_task(sc.get_async())
+    loop.create_task(ntw.get_async())
+    loop.create_task(weather.get_async())
+    loop.create_task(clock.get_async())
+
+    loop.run_forever()
     # loop.close()
-    # return
-
-    print("Running main loop")
-    while True:
-        now = utime.time()
-        is_connected = ntw.check_connection(now)
-        if is_connected:
-            clock.get(now)
-            weather.get(now)
-            # google.get(now)
-        sc.update_display()
-        utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 if __name__ == "__main__":

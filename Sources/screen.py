@@ -4,6 +4,7 @@ import utime
 
 # Local libs
 import ssd1306
+import uasyncio as asyncio
 
 # Local scripts
 import consts as const
@@ -193,6 +194,11 @@ class Screen_Handler:
     def update_display(self):
         self.oled.show()
 
+    async def get_async(self):
+        while True:
+            self.update_display()
+            await asyncio.sleep_ms(int(const.MAIN_CYCLE_TIME * 1000))
+
 
 class Screen_element:
     def __init__(self, ntw, sc, max_time_check):
@@ -202,12 +208,11 @@ class Screen_element:
         self.time_diff = 0
         self.max_time_check = max_time_check
 
-    def get_time_diff(self, now):
-        self.time_diff = now - self.last_time_check
-        if self.time_diff < 0:
-            self.last_time_check = 0
-            self.time_diff = now
-        if self.time_diff > self.max_time_check:
-            self.last_time_check = now
-            return True
-        return False
+    async def get_async(self):
+        while True:
+            if self.ntw.connected:
+                self.get()
+                wait_time = self.max_time_check
+            else:
+                wait_time = const.MAIN_CYCLE_TIME
+            await asyncio.sleep(wait_time)
