@@ -145,10 +145,13 @@ class Screen_Handler:
 
     def display_str(self, elem):
         x1, y1, string = elem
+        # print(string, " | Before ", x1, y2)
         x1 = self.width_to_pixel(x1)
+        # print(string, " | After ", x1, y2)
         y1 = self.height_to_pixel(y1)
         x2 = (len(string) + 1) * self.char_width
-        y2 = self.char_height
+        y2 = y1 + self.char_height
+        # print(x1, y1, x2, y2)
         self.reset_zone(x1, y1, x2, y2)
         self.oled.text(string, x1, y1)
         return (x1, y1, x2, y2)

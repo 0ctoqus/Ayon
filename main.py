@@ -332,26 +332,34 @@ class Google(Screen_element):
                 headers=headers,
             )
 
-    def __init__(self, ntw, sc):
-        Screen_element.__init__(self, ntw, sc, 0)
+    def __init__(self, ntw, sc, max_time_check):
+        Screen_element.__init__(self, ntw, sc, max_time_check)
         self.oauth = self.Oauth(ntw, sc)
         self.drive = self.Drive(ntw)
-        self.messages = []
+        self.messages = None
+        self.accu = 0
 
-    def get(self, now):
-        if self.oauth.get_time_diff(now) and self.oauth.check_connected(now):
+    def get(self):
+        if self.oauth.check_connected(utime.time()):
             if self.drive.file_id is None:
                 self.drive.check_file(self.oauth.access_token)
-            elif len(self.messages) == 0:
+            else:
                 print("Drive ready", self.drive.file_id)
                 self.messages = self.drive.get_file(self.oauth.access_token)
-                for pos in range(len(self.messages)):
-                    print(self.messages[pos])
-                    self.sc.set_memory(
-                        name="email_" + str(pos),
-                        elem_type="str",
-                        content=(0, 2 + pos, self.messages[pos][2]),
-                    )
+                if self.messages != None:
+                    for pos in range(len(self.messages)):
+                        print(self.messages[pos])
+                        self.sc.set_memory(
+                            name="email_" + str(pos),
+                            elem_type="str",
+                            content=(
+                                0,
+                                2 + pos,
+                                str(self.accu) + self.messages[pos][2],
+                            ),
+                            delete=True,
+                        )
+                self.accu += 1
 
 
 def main():
@@ -359,7 +367,7 @@ def main():
     ntw = Network(sc, const.NTW_CHECK_TIME)
     clock = Clock(ntw, sc, const.CLOCK_TIME_CHECK)
     weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
-    google = Google(ntw, sc)
+    google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
     sc.set_memory(
         name="line_top",
         elem_type="rect",
@@ -391,6 +399,7 @@ def main():
     loop.create_task(ntw.get_async())
     loop.create_task(weather.get_async())
     loop.create_task(clock.get_async())
+    loop.create_task(google.get_async())
 
     loop.run_forever()
     # loop.close()

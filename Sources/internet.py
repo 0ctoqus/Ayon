@@ -30,11 +30,15 @@ class Network:
             json = None
             if data is not None:
                 data = ujson.dumps(data)
-            response = request(request_type, url, data=data, headers=headers)
+            try:
+                response = request(request_type, url, data=data, headers=headers)
+            except Exception as e:
+                print(e)
+                response = None
             if response is not None:
                 json = response.json()
-            response.close()
-            return json
+                response.close()
+                return json
         print("request error")
         return None
 
