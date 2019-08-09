@@ -24,3 +24,4 @@ GOOGLE_OAUTH_CODE_URL = "https://accounts.google.com/o/oauth2/device/code"
 GOOGLE_OAUTH_TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
 GOOGLE_REFRESH_TOKEN_FILE = "refresh_token.txt"
 GOOGLE_DRIVE_URL = "https://www.googleapis.com/drive/v2/files"
+GOOGLE_TIME_CHECK = 5
