@@ -3,9 +3,10 @@ import machine
 import esp32
 from math import ceil
 import utime
+import _thread
 
 # Local libs
-import uasyncio as asyncio
+# import uasyncio as asyncio
 
 # Local scripts
 from screen import Screen_element
@@ -29,7 +30,7 @@ class Clock(Screen_element):
         self.url = const.CLOCK_URL
         self.tm = None
 
-    def set(self):
+    def get(self):
         print("Getting time")
         time_data = self.ntw.request("GET", self.url)
         if time_data is not None:
@@ -44,28 +45,23 @@ class Clock(Screen_element):
         machine.RTC().datetime(self.tm[0:3] + (0,) + self.tm[3:6] + (0,))
         return is_set
 
-    def get(self):
-        localtime = utime.localtime()
-        date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
-        time = (
-            "%02d" % localtime[3]
-            + ":"
-            + "%02d" % localtime[4]
-            + ":"
-            + "%02d" % localtime[5]
-        )
-        self.sc.set_memory(
-            name="date", elem_type="str", content=(1, 0, time + " " + date), delete=True
-        )
+    # async def get_async(self):
+    #    next_check = 0
+    #    while True:
+    #        if self.ntw.connected and utime.time() >= next_check:
+    #            if self.set():
+    #                next_check = utime.time() + self.max_time_check
+    #        self.get()
+    #        await asyncio.sleep(const.MAIN_CYCLE_TIME)
 
-    async def get_async(self):
-        next_check = 0
-        while True:
-            if self.ntw.connected and utime.time() >= next_check:
-                if self.set():
-                    next_check = utime.time() + self.max_time_check
-            self.get()
-            await asyncio.sleep_ms(int(const.MAIN_CYCLE_TIME * 1000))
+    # def get_async(self):
+    #    next_check = 0
+    #    while True:
+    #        if self.ntw.connected and utime.time() >= next_check:
+    #            if self.set():
+    #                next_check = utime.time() + self.max_time_check
+    #        self.get()
+    #        utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Weather(Screen_element):
@@ -108,6 +104,7 @@ class Weather(Screen_element):
                 self.pixel_art = self.id_options[int(self.WEATHER_id / 100)]
             else:
                 self.pixel_art = "cross"
+            result = True
         else:
             print("City Not Found")
             self.WEATHER_description = "None"
@@ -116,6 +113,7 @@ class Weather(Screen_element):
             self.current_pressure = 0
             self.current_humidity = 0
             self.pixel_art = "cross"
+            result = False
 
         temp_str = str(self.current_temperature)
         y = 7
@@ -135,6 +133,7 @@ class Weather(Screen_element):
             elem_type="str",
             content=(2 + len(temp_str), y, str(self.current_humidity) + "%"),
         )
+        return result
 
 
 class Google(Screen_element):
@@ -393,16 +392,31 @@ def main():
         ),
     )
 
-    loop = asyncio.get_event_loop()
+    def test():
+        while True:
+            print("Alive")
+            utime.sleep(1)
 
-    loop.create_task(sc.get_async())
-    loop.create_task(ntw.get_async())
-    loop.create_task(weather.get_async())
-    loop.create_task(clock.get_async())
-    loop.create_task(google.get_async())
+    # loop = asyncio.get_event_loop()
+    # loop.create_task(sc.get_async())
+    # loop.create_task(ntw.get_async())
+    # loop.create_task(clock.get_async())
+    # loop.create_task(weather.get_async())
+    # loop.create_task(google.get_async())
+    # loop.run_forever()
 
-    loop.run_forever()
-    # loop.close()
+    # _thread.stack_size(1024 * )
+    _thread.start_new_thread(sc.get_async, ())
+    # _thread.start_new_thread(ntw.get_async, ())
+    # _thread.start_new_thread(test, ())
+
+    while True:
+        now = utime.time()
+        ntw.check(now)
+        clock.check(now)
+        weather.check(now)
+        google.check(now)
+        utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 if __name__ == "__main__":

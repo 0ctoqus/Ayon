@@ -4,7 +4,8 @@ import utime
 
 # Local libs
 import ssd1306
-import uasyncio as asyncio
+
+# import uasyncio as asyncio
 
 # Local scripts
 import consts as const
@@ -197,25 +198,63 @@ class Screen_Handler:
     def update_display(self):
         self.oled.show()
 
-    async def get_async(self):
+    # async def get_async(self):
+    #    while True:
+    #        self.update_display()
+    #        await asyncio.sleep(const.MAIN_CYCLE_TIME)
+
+    def get_async(self):
         while True:
+            # print("screen update")
+            # Set time
+            localtime = utime.localtime()
+            date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+            time = (
+                "%02d" % localtime[3]
+                + ":"
+                + "%02d" % localtime[4]
+                + ":"
+                + "%02d" % localtime[5]
+            )
+            self.set_memory(
+                name="date",
+                elem_type="str",
+                content=(1, 0, time + " " + date),
+                delete=True,
+            )
             self.update_display()
-            await asyncio.sleep_ms(int(const.MAIN_CYCLE_TIME * 1000))
+            utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Screen_element:
     def __init__(self, ntw, sc, max_time_check):
         self.ntw = ntw
         self.sc = sc
-        self.last_time_check = 0
+        self.next_time_check = 0
         self.time_diff = 0
         self.max_time_check = max_time_check
 
-    async def get_async(self):
-        while True:
-            if self.ntw.connected:
-                self.get()
-                wait_time = self.max_time_check
+    # async def get_async(self):
+    #    while True:
+    #        if self.ntw.connected:
+    #            self.get()
+    #            wait_time = self.max_time_check
+    #        else:
+    #            wait_time = const.MAIN_CYCLE_TIME
+    #        await asyncio.sleep(wait_time)
+
+    # def get_async(self):
+    #     while True:
+    #         if self.ntw.connected:
+    #             self.get()
+    #             wait_time = self.max_time_check
+    #         else:
+    #             wait_time = const.MAIN_CYCLE_TIME
+    #         utime.sleep(wait_time)
+
+    def check(self, now):
+        if self.next_time_check - now < 0 and self.ntw.connected:
+            if self.get():
+                self.next_time_check = utime.time() + self.max_time_check
             else:
-                wait_time = const.MAIN_CYCLE_TIME
-            await asyncio.sleep(wait_time)
+                self.next_time_check = utime.time() + const.MAIN_CYCLE_TIME * 10

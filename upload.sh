@@ -1,5 +1,3 @@
-#!/bin/bash
-
 echo "Uploading files"
 for filename in Sources/*.py; do
 	basename=$(basename "$filename")

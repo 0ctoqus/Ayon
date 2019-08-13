@@ -5,7 +5,7 @@ import ujson
 import utime
 
 # Local libs
-import uasyncio as asyncio
+# import uasyncio as asyncio
 
 # Local scripts
 from screen import Screen_element
@@ -36,7 +36,11 @@ class Network:
                 print(e)
                 response = None
             if response is not None:
-                json = response.json()
+                try:
+                    json = response.json()
+                except:
+                    print("error in json")
+                    json = None
                 response.close()
                 return json
         print("request error")
@@ -98,11 +102,25 @@ class Network:
     def get(self):
         self.connected = self.check_connection()
 
-    async def get_async(self):
+    # async def get_async(self):
+    #    while True:
+    #        if not self.connected and self.get():
+    #            wait_time = self.max_time_check
+    #            print("Connection set")
+    #        else:
+    #            wait_time = const.MAIN_CYCLE_TIME
+    #        await asyncio.sleep(wait_time)
+
+    def get_async(self):
         while True:
             if not self.connected and self.get():
-                wait_time = self.max_time_check * 1000
+                wait_time = self.max_time_check
                 print("Connection set")
             else:
-                wait_time = const.MAIN_CYCLE_TIME * 1000
-            await asyncio.sleep_ms(int(wait_time))
+                wait_time = const.MAIN_CYCLE_TIME
+            utime.sleep(wait_time)
+
+    def check(self, now):
+        if not self.connected or self.trying_to_connect:
+            print("getting ntw")
+            self.get()
