@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+	],
+    "settings": {
+    	"sublack.black_on_save": true,
+    	"linters": {
+			"flake8": {
+				"args": ["--max-line-length=90"]
+        	}
+    	}
+    }
+}

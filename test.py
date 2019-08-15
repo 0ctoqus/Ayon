@@ -1,12 +1,6 @@
-# MicroPython SSD1306 OLED driver, I2C and SPI interfaces
-
+from machine import Pin, I2C
 import time
 import framebuf
-
-# Scroll
-# https://forum.micropython.org/viewtopic.php?t=2336
-# https://github.com/timotet/SSD1306
-
 
 # register definitions
 SET_CONTRAST = const(0x81)
@@ -103,6 +97,7 @@ class SSD1306:
         self.write_cmd(0)
         self.write_cmd(self.pages - 1)
         self.write_framebuf()
+        # self.write_data(self.buffer)
 
     def fill(self, col):
         self.framebuf.fill(col)
@@ -140,42 +135,18 @@ class SSD1306:
             self.write_cmd(SET_HWSCROLL_LEFT)
             self.write_cmd(0x00)  # dummy byte
             self.write_cmd(start_page)  # start page = page 7
-            self.write_cmd(0x05)  # frequency = 5 frames
+            self.write_cmd(0x00)  # frequency = 5 frames
             self.write_cmd(end_page)  # end page = page 0
         else:
             self.write_cmd(SET_HWSCROLL_RIGHT)
             self.write_cmd(0x00)  # dummy byte
             self.write_cmd(start_page)  # start page = page 0
-            self.write_cmd(0x05)  # frequency = 5 frames
+            self.write_cmd(0x00)  # frequency = 5 frames
             self.write_cmd(end_page)  # end page = page 7
 
         self.write_cmd(0x00)
         self.write_cmd(0xFF)
         self.write_cmd(SET_HWSCROLL_ON)  # activate scroll
-
-        """
-            # This is for the diagonal scroll, it shows wierd actifacts on the lcd!!
-            def hw_scroll_diag(self, direction=True):   # default to scroll verticle and right
-                self.write_cmd(SET_HWSCROLL_OFF)  # turn off hardware scroll per SSD1306 datasheet
-                if not direction:
-                    self.write_cmd(SET_HWSCROLL_VL)
-                    self.write_cmd(0x00) # dummy byte
-                    self.write_cmd(0x07) # start page = page 7
-                    self.write_cmd(0x00) # frequency = 5 frames
-                    self.write_cmd(0x00) # end page = page 0
-                    self.write_cmd(self.height)
-                else:
-                    self.write_cmd(SET_HWSCROLL_VR)
-                    self.write_cmd(0x00) # dummy byte
-                    self.write_cmd(0x00) # start page = page 0
-                    self.write_cmd(0x00) # frequency = 5 frames
-                    self.write_cmd(0x07) # end page = page 7
-                    self.write_cmd(self.height)
-
-                self.write_cmd(0x00)
-                self.write_cmd(0xff)
-                self.write_cmd(SET_HWSCROLL_ON) # activate scroll
-        """
 
 
 class SSD1306_I2C(SSD1306):
@@ -195,6 +166,14 @@ class SSD1306_I2C(SSD1306):
         self.temp[1] = cmd
         self.i2c.writeto(self.addr, self.temp)
 
+    # def write_data(self, buf):
+    #    self.temp[0] = self.addr << 1
+    #    self.temp[1] = 0x40  # Co=0, D/C#=1
+    #    self.i2c.start()
+    #    self.i2c.write(self.temp)
+    #    self.i2c.write(buf)
+    #    self.i2c.stop()
+
     def write_framebuf(self):
         # Blast out the frame buffer using a single I2C transaction to support
         # hardware I2C interfaces.
@@ -202,3 +181,43 @@ class SSD1306_I2C(SSD1306):
 
     def poweron(self):
         pass
+
+
+def lcdInit():
+    # I2C pins
+    # I have 4k7 pull ups on scl and sda
+    # set up I2C on gpio 14 and 16
+    i2c = I2C(scl=Pin(4), sda=Pin(5))
+    lcd = SSD1306_I2C(128, 64, i2c)  # lcd is 128x32
+    return lcd
+
+
+def main():
+
+    display = lcdInit()
+    display.clear()
+    print("in main")
+    display.clear()
+    while True:
+        display.text("Satic", 0, 0)
+        display.text("-----", 0, 1 * 8)
+        display.text("Hello World", 0, 2 * 8)
+        display.text("-----", 0, 6 * 8)
+        display.text("Static", 0, 7 * 8)
+        display.show()
+        # scroll right
+        display.hw_scroll_h(direction=True, start_page=0x02, end_page=0x05)
+        time.sleep(3)
+
+        # scroll left
+        display.hw_scroll_h(direction=False, start_page=0x02, end_page=0x05)
+
+        time.sleep(3)
+
+        display.hw_scroll_off()
+        # time.sleep(3)
+        # display.clear()
+        # time.sleep(1)
+
+
+main()

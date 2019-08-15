@@ -135,6 +135,32 @@ class Screen_Handler:
             ],
         }
 
+        self.set_memory(
+            name="line_top",
+            elem_type="rect",
+            content=(
+                0,
+                self.height_to_pixel(2) - 7,
+                self.width_to_pixel(17),
+                self.height_to_pixel(2) - 5,
+                True,
+                1,
+            ),
+        )
+
+        self.set_memory(
+            name="line_bottom",
+            elem_type="rect",
+            content=(
+                0,
+                self.height_to_pixel(6) + 5,
+                self.width_to_pixel(17),
+                self.height_to_pixel(6) + 7,
+                True,
+                1,
+            ),
+        )
+
     def width_to_pixel(self, x):
         return int(self.screen_width / self.screen_columns * x)
 
@@ -192,7 +218,7 @@ class Screen_Handler:
             self.reset_zone(x1, y1, x2, y2)
             del self.memory_index[name]
         if elem_type is not None and content is not None:
-            elems = tuple(list(content))
+            # elems = tuple(list(content))
             self.memory_index[name] = self.displayables[elem_type](content)
 
     def update_display(self):

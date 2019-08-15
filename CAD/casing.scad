@@ -1,29 +1,34 @@
 echo(version=version());
 
 //Display casing
-casing_width = 30;
-casing_depth = 22;
-casing_height = 7;
+casing_width     = 30;
+casing_depth     = 22;
+casing_height    = 7;
 casing_thiccness = 0.4;
 
-//Display
-display_width = 24.7;
-display_depth = 16.2;
+//Display hole
+display_width  = 24.7;
+display_depth  = 16.2;
 display_height = 1.6;
 
 //Display bezel
-bezel_size = 1.6;
+bezel_size      = 1.6;
 bezel_thiccness = 0.2;
 
 //Keyboard
-keyboard_angle = -15;
+keyboard_angle       = -15;
 keyboard_depth_ratio = 0.9;
-                  
-module rotate_about_pt(x, z, y, pt){ 
+
+//Separator
+separator_diameter = 1;
+separator_depth = 5;
+separator_segments = 8;
+
+module rotate_about_pt(x, z, y, pt){
     translate(pt)
     rotate([x, y, z])
     translate(-pt)
-    children();   
+    children();
 }
 
 module display_casing(hollow){
@@ -56,7 +61,7 @@ module display_casing(hollow){
       translate([casing_thiccness, casing_thiccness, casing_thiccness])
       cube([casing_width - casing_thiccness * 2,
         casing_depth - casing_thiccness * 2 + casing_thiccness,
-        casing_height - casing_thiccness * 2], 
+        casing_height - casing_thiccness * 2],
         center= false);
     }
   }
@@ -79,20 +84,49 @@ module keyboard(hollow){
   }
 }
 
+module separator(hollow){
+  diameter= hollow ? separator_diameter - casing_thiccness : separator_diameter;
+  e=.02;
+  color("purple")
+  translate([casing_width, casing_depth, casing_height])
+  rotate([0, -90, 0])
+  if (hollow == false) {
+    difference(){
+        cylinder($fn= separator_segments,
+        h= casing_width,
+        r= diameter,
+        center= false);
+      translate([0, -diameter, -e])
+      rotate_about_pt(0, -keyboard_angle * 0.8,  0, [0, 0, casing_height])
+      cube([diameter * 2, diameter * 2, casing_width + 2 * e]);
+    }
+  }
+  else {
+    cylinder($fn= separator_segments,
+      h= casing_width,
+      r= diameter,
+      center= false);
+  }
+}
+
 module main_body(){
   difference(){
-    //Body
-    union(){
-      display_casing(false);
-      keyboard(false);
+    union (){
+      difference(){
+        union(){
+          display_casing(false);
+          keyboard(false);
+        }
+        keyboard(true);
+        display_casing(true);
+      }
+      separator(false);
     }
-    //Hollow middle
-    keyboard(true);
-    display_casing(true);
-  }  
+    separator(true);
+  }
 }
 
 //minkowski() {
-    main_body();
+main_body();
 //  sphere(1);
 //}
