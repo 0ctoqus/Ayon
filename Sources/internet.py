@@ -23,7 +23,7 @@ class Network:
         self.trying_to_connect = False
         self.ssid = None
         self.pswd = None
-        self.connected = False
+        # self.connected = False
 
     def request(self, request_type, url, data=None, headers={}):
         if self.wlan.isconnected():
@@ -69,7 +69,7 @@ class Network:
             print("Available wifi ", available_wifi)
             self.ssid = max(available_wifi, key=lambda wifi: wifi[1])[0]
             self.pswd = const.NTW_LIST[self.ssid]
-            print("Select wifi ", self.ssid)
+            print("Select wifi", self.ssid)
         else:
             print("No wifi available")
             self.ssid = None
@@ -99,8 +99,8 @@ class Network:
 
         return self.wlan.isconnected()
 
-    def get(self):
-        self.connected = self.check_connection()
+    # def get(self):
+    #    self.connected = self.check_connection()
 
     # async def get_async(self):
     #    while True:
@@ -113,7 +113,7 @@ class Network:
 
     def get_async(self):
         while True:
-            if not self.connected and self.get():
+            if self.check_connection():
                 wait_time = self.max_time_check
                 print("Connection set")
             else:
@@ -121,6 +121,5 @@ class Network:
             utime.sleep(wait_time)
 
     def check(self, now):
-        if not self.connected or self.trying_to_connect:
+        if not self.check_connection():
             print("getting ntw")
-            self.get()

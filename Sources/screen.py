@@ -279,7 +279,7 @@ class Screen_element:
     #         utime.sleep(wait_time)
 
     def check(self, now):
-        if self.next_time_check - now < 0 and self.ntw.connected:
+        if self.next_time_check - now < 0:  # and self.ntw.connected:
             if self.get():
                 self.next_time_check = utime.time() + self.max_time_check
             else:

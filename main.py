@@ -14,6 +14,7 @@ from screen import Screen_element
 from screen import Screen_Handler
 from internet import Network
 import consts as const
+from google import Google
 
 
 # https://docs.python.org/3.5/library/_thread.html#module-_thread
@@ -44,6 +45,7 @@ class Clock(Screen_element):
             is_set = False
         self.tm = utime.localtime(unix_timestamp)
         machine.RTC().datetime(self.tm[0:3] + (0,) + self.tm[3:6] + (0,))
+        print("machine time set")
         return is_set
 
     # async def get_async(self):
@@ -142,7 +144,7 @@ def main():
     ntw = Network(sc, const.NTW_CHECK_TIME)
     clock = Clock(ntw, sc, const.CLOCK_TIME_CHECK)
     weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
-    google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
+    # google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
 
     # loop = asyncio.get_event_loop()
     # loop.create_task(sc.get_async())
@@ -154,15 +156,16 @@ def main():
 
     # _thread.stack_size(1024 * )
     _thread.start_new_thread(sc.get_async, ())
-    # _thread.start_new_thread(ntw.get_async, ())
+    _thread.start_new_thread(ntw.get_async, ())
     # _thread.start_new_thread(test, ())
 
     while True:
         now = utime.time()
-        ntw.check(now)
-        clock.check(now)
-        weather.check(now)
-        google.check(now)
+        # ntw.check(now)
+        if ntw.wlan.isconnected():
+            clock.check(now)
+            weather.check(now)
+            # google.check(now)
         utime.sleep(const.MAIN_CYCLE_TIME)
 
 
