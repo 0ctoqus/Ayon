@@ -121,22 +121,35 @@ class Weather(Screen_element):
         temp_str = str(self.current_temperature)
         y = 7
         self.sc.set_memory(
-            name="WEATHER_art", elem_type="pixel", content=(0, y, self.pixel_art)
+            name="WEATHER_art",
+            elem_type="pixel",
+            content=(0, y, self.pixel_art),
+            update=True,
         )
         self.sc.set_memory(
-            name="WEATHER_temp", elem_type="str", content=(1, y, temp_str)
+            name="WEATHER_temp", elem_type="str", content=(1, y, temp_str), update=True
         )
         self.sc.set_memory(
             name="WEATHER_temp_type",
             elem_type="pixel",
             content=(1 + len(temp_str), y, "celcius"),
+            update=True,
         )
         self.sc.set_memory(
             name="WEATHER_humidity",
             elem_type="str",
             content=(2 + len(temp_str), y, str(self.current_humidity) + "%"),
+            update=True,
         )
         return result
+
+
+def scroll_text(sc):
+    sc.set_memory(
+        name="test", elem_type="str", content=(0, 2, "Hello world"), update=False
+    )
+    sc.oled.hw_scroll_h(direction=True, start_page=2, end_page=5)
+    sc.oled.show(start_page=0x02, end_page=0x05)
 
 
 def main():
@@ -159,13 +172,33 @@ def main():
     _thread.start_new_thread(ntw.get_async, ())
     # _thread.start_new_thread(test, ())
 
+    # while False:
+    #    # sc.text("Satic", 0, 0)
+    #    # sc.text("-----", 0, 1 * 8)
+    #    # sc.text("Hello World", 0, 2 * 8)
+    #    sc.set_memory(
+    #        name="test", elem_type="str", content=(0, 2, "Hello world"), update=False
+    #    )
+    #    # sc.text("-----", 0, 6 * 8)
+    #    # sc.text("Static", 0, 7 * 8)
+    #    sc.oled.show(start_page=0x02, end_page=0x05)
+    #    # scroll right
+    #    sc.oled.hw_scroll_h(direction=True, start_page=0x02, end_page=0x05)
+    #    utime.sleep(3)
+    #    # scroll left
+    #    sc.oled.hw_scroll_h(direction=False, start_page=0x02, end_page=0x05)
+    #    utime.sleep(3)
+    #    sc.oled.hw_scroll_off()
+
+    scroll_text(sc)
     while True:
         now = utime.time()
         # ntw.check(now)
+
         if ntw.wlan.isconnected():
             clock.check(now)
             weather.check(now)
-            # google.check(now)
+        # google.check(now)
         utime.sleep(const.MAIN_CYCLE_TIME)
 
 

@@ -135,6 +135,7 @@ class Screen_Handler:
             ],
         }
 
+        # Top line
         self.set_memory(
             name="line_top",
             elem_type="rect",
@@ -146,8 +147,10 @@ class Screen_Handler:
                 True,
                 1,
             ),
+            update=True,
         )
 
+        # Bottom line
         self.set_memory(
             name="line_bottom",
             elem_type="rect",
@@ -159,6 +162,7 @@ class Screen_Handler:
                 True,
                 1,
             ),
+            update=True,
         )
 
     def width_to_pixel(self, x):
@@ -167,26 +171,33 @@ class Screen_Handler:
     def height_to_pixel(self, y):
         return int(self.screen_height / self.screen_spacing * y)
 
+    def pixel_to_width(self, x):
+        return int(x / (self.screen_width / self.screen_columns))
+
+    def pixel_to_height(self, y):
+        return int(y / (self.screen_height / self.screen_spacing))
+
     def reset_zone(self, x1, y1, x2, y2):
         self.oled.rect(x1, y1, x2 - x1, y2 - y1, True, 0)
 
+    # x, y, string
     def display_str(self, elem):
-        x1, y1, string = elem
-        # print(string, " | Before ", x1, y2)
-        x1 = self.width_to_pixel(x1)
-        # print(string, " | After ", x1, y2)
-        y1 = self.height_to_pixel(y1)
+        x, y, string = elem
+        x1 = self.width_to_pixel(x)
+        y1 = self.height_to_pixel(y)
+
         x2 = (len(string) + 1) * self.char_width
         y2 = y1 + self.char_height
-        # print(x1, y1, x2, y2)
+
         self.reset_zone(x1, y1, x2, y2)
         self.oled.text(string, x1, y1)
         return (x1, y1, x2, y2)
 
+    # x, y, content_name
     def display_pixel(self, elem):
-        x1, y1, content_name = elem
-        x1 = self.width_to_pixel(x1)
-        y1 = self.height_to_pixel(y1)
+        x, y, content_name = elem
+        x1 = self.width_to_pixel(x)
+        y1 = self.height_to_pixel(y)
         art = self.pixel_art[content_name]
         self.reset_zone(x1, y1, len(art[0]), len(art))
         y2 = y1
@@ -199,19 +210,23 @@ class Screen_Handler:
             y2 += 1
         return (x1, y1, x2, y2)
 
+    # x1, y1, x2, y2
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
         self.reset_zone(x1, y1, x2, y2)
         self.oled.line(x1, y1, x2, y2)
+        # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
 
+    # x1, y1, x2, y2, fill, col
     def display_rect(self, elem):
         x1, y1, x2, y2, fill, col = elem
         self.reset_zone(x1, y1, x2, y2)
         self.oled.rect(x1, y1, x2 - x1, y2 - y1, fill, col)
+        # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
 
-    def set_memory(self, name, elem_type=None, content=None, delete=False):
+    def set_memory(self, name, elem_type=None, content=None, update=True, delete=False):
         # Delete element
         if delete and name in self.memory_index:
             x1, y1, x2, y2 = self.memory_index[name]
@@ -219,10 +234,16 @@ class Screen_Handler:
             del self.memory_index[name]
         if elem_type is not None and content is not None:
             # elems = tuple(list(content))
-            self.memory_index[name] = self.displayables[elem_type](content)
+            x1, y1, x2, y2 = self.displayables[elem_type](content)
+            self.memory_index[name] = (x1, y1, x2, y2)
+            if update:
+                self.oled.show(
+                    start_page=self.pixel_to_height(y1),
+                    end_page=self.pixel_to_height(y2),
+                )
 
-    def update_display(self):
-        self.oled.show()
+    # def update_display(self, start_page=0x00, end_page=0x07):
+    #    self.oled.show(start_page, end_page)
 
     # async def get_async(self):
     #    while True:
@@ -246,9 +267,11 @@ class Screen_Handler:
                 name="date",
                 elem_type="str",
                 content=(1, 0, time + " " + date),
+                update=True,
                 delete=True,
             )
-            self.update_display()
+            # self.oled.show(start_page=0x06, end_page=0x07)
+            # self.oled.show()
             utime.sleep(const.MAIN_CYCLE_TIME)
 
 

@@ -48,9 +48,14 @@ class Network:
 
     def connect(self):
         self.sc.set_memory(
-            name="connection_status", elem_type="pixel", content=(0, 0, "cross")
+            name="connection_status",
+            elem_type="pixel",
+            content=(0, 0, "cross"),
+            update=True,
         )
-        self.sc.update_display()
+        # self.sc.update_display()
+        # self.sc.oled.show(start_page=0x00, end_page=0x01)
+        self.sc.oled.show(start_page=0, end_page=1)
         print("connecting to:", self.ssid, " with password ", self.pswd)
         self.wlan.connect(self.ssid, self.pswd)
 
@@ -93,7 +98,10 @@ class Network:
                 self.ip = self.wlan.ifconfig()
                 print("network config:", self.ip)
                 self.sc.set_memory(
-                    name="connection_status", elem_type="pixel", content=(0, 0, "check")
+                    name="connection_status",
+                    elem_type="pixel",
+                    content=(0, 0, "check"),
+                    update=True,
                 )
                 self.trying_to_connect = False
 
@@ -115,7 +123,6 @@ class Network:
         while True:
             if self.check_connection():
                 wait_time = self.max_time_check
-                print("Connection set")
             else:
                 wait_time = const.MAIN_CYCLE_TIME
             utime.sleep(wait_time)

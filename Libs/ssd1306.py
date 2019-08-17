@@ -89,20 +89,33 @@ class SSD1306:
     def invert(self, invert):
         self.write_cmd(SET_NORM_INV | (invert & 1))
 
-    def show(self):
-        x0 = 0
-        x1 = self.width - 1
+    def show(self, start_page=0, end_page=7):
+        start_column = 0
+        end_column = self.width - 1
         if self.width == 64:
             # displays with width of 64 pixels are shifted by 32
-            x0 += 32
-            x1 += 32
+            start_column += 32
+            end_column += 32
+
+        """Write display buffer to physical display."""
         self.write_cmd(SET_COL_ADDR)
-        self.write_cmd(x0)
-        self.write_cmd(x1)
+        self.write_cmd(start_column)
+        self.write_cmd(end_column)
         self.write_cmd(SET_PAGE_ADDR)
-        self.write_cmd(0)
-        self.write_cmd(self.pages - 1)
-        self.write_framebuf()
+        self.write_cmd(start_page)  # Page start address. (0 = reset)
+        self.write_cmd(end_page)  # Page end address.
+
+        # self.write_framebuf()
+
+        tmp_buffer = self.buffer[1:]
+        control = bytearray(1)
+        control[0] = 0x40
+        # for i in range(start_page * 128, (end_page + 1) * 128, 16):
+        #    self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
+
+        self.i2c.writeto(
+            self.addr, control + tmp_buffer[start_page * 128 : (end_page + 1) * 128]
+        )
 
     def fill(self, col):
         self.framebuf.fill(col)
@@ -140,13 +153,13 @@ class SSD1306:
             self.write_cmd(SET_HWSCROLL_LEFT)
             self.write_cmd(0x00)  # dummy byte
             self.write_cmd(start_page)  # start page = page 7
-            self.write_cmd(0x05)  # frequency = 5 frames
+            self.write_cmd(0x00)  # frequency = 5 frames
             self.write_cmd(end_page)  # end page = page 0
         else:
             self.write_cmd(SET_HWSCROLL_RIGHT)
             self.write_cmd(0x00)  # dummy byte
             self.write_cmd(start_page)  # start page = page 0
-            self.write_cmd(0x05)  # frequency = 5 frames
+            self.write_cmd(0x00)  # frequency = 5 frames
             self.write_cmd(end_page)  # end page = page 7
 
         self.write_cmd(0x00)
@@ -199,6 +212,14 @@ class SSD1306_I2C(SSD1306):
         # Blast out the frame buffer using a single I2C transaction to support
         # hardware I2C interfaces.
         self.i2c.writeto(self.addr, self.buffer)
+
+    # def write_data(self):
+    #     self.temp[0] = self.addr << 1
+    #     self.temp[1] = 0x40  # Co=0, D/C#=1
+    #     self.i2c.start()
+    #     self.i2c.write(self.temp)
+    #     self.i2c.write(self.buffer)
+    #     self.i2c.stop()
 
     def poweron(self):
         pass
