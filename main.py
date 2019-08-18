@@ -1,12 +1,10 @@
 # Libs
 import machine
-
-# import esp32
-# from math import ceil
 import utime
-import _thread
 
 # Local libs
+# import esp32
+# import _thread
 # import uasyncio as asyncio
 
 # Local scripts
@@ -14,16 +12,8 @@ from screen import Screen_element
 from screen import Screen_Handler
 from internet import Network
 import consts as const
-from google import Google
 
-
-# https://docs.python.org/3.5/library/_thread.html#module-_thread
-# https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
-# _thread.start_new_thread(google.get, (now,))
-
-# https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
-# https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
-# https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
+# from google import Google
 
 
 class Clock(Screen_element):
@@ -35,6 +25,7 @@ class Clock(Screen_element):
     def get(self):
         print("Getting time")
         time_data = self.ntw.request("GET", self.url)
+        print("Time response =", time_data)
         if time_data is not None:
             unix_timestamp = (
                 int(time_data["unixtime"]) - 946684800 + 3600 * const.CLOCK_UTC_OFFSET
@@ -47,24 +38,6 @@ class Clock(Screen_element):
         machine.RTC().datetime(self.tm[0:3] + (0,) + self.tm[3:6] + (0,))
         print("machine time set")
         return is_set
-
-    # async def get_async(self):
-    #    next_check = 0
-    #    while True:
-    #        if self.ntw.connected and utime.time() >= next_check:
-    #            if self.set():
-    #                next_check = utime.time() + self.max_time_check
-    #        self.get()
-    #        await asyncio.sleep(const.MAIN_CYCLE_TIME)
-
-    # def get_async(self):
-    #    next_check = 0
-    #    while True:
-    #        if self.ntw.connected and utime.time() >= next_check:
-    #            if self.set():
-    #                next_check = utime.time() + self.max_time_check
-    #        self.get()
-    #        utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Weather(Screen_element):
@@ -148,8 +121,8 @@ def scroll_text(sc):
     sc.set_memory(
         name="test", elem_type="str", content=(0, 2, "Hello world"), update=False
     )
-    sc.oled.hw_scroll_h(direction=True, start_page=2, end_page=5)
-    sc.oled.show(start_page=0x02, end_page=0x05)
+    sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
+    sc.oled.show(start_page=0x02, end_page=0x02)
 
 
 def main():
@@ -159,46 +132,31 @@ def main():
     weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
     # google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
 
-    # loop = asyncio.get_event_loop()
-    # loop.create_task(sc.get_async())
-    # loop.create_task(ntw.get_async())
-    # loop.create_task(clock.get_async())
-    # loop.create_task(weather.get_async())
-    # loop.create_task(google.get_async())
-    # loop.run_forever()
-
-    # _thread.stack_size(1024 * )
-    _thread.start_new_thread(sc.get_async, ())
-    _thread.start_new_thread(ntw.get_async, ())
-    # _thread.start_new_thread(test, ())
-
-    # while False:
-    #    # sc.text("Satic", 0, 0)
-    #    # sc.text("-----", 0, 1 * 8)
-    #    # sc.text("Hello World", 0, 2 * 8)
-    #    sc.set_memory(
-    #        name="test", elem_type="str", content=(0, 2, "Hello world"), update=False
-    #    )
-    #    # sc.text("-----", 0, 6 * 8)
-    #    # sc.text("Static", 0, 7 * 8)
-    #    sc.oled.show(start_page=0x02, end_page=0x05)
-    #    # scroll right
-    #    sc.oled.hw_scroll_h(direction=True, start_page=0x02, end_page=0x05)
-    #    utime.sleep(3)
-    #    # scroll left
-    #    sc.oled.hw_scroll_h(direction=False, start_page=0x02, end_page=0x05)
-    #    utime.sleep(3)
-    #    sc.oled.hw_scroll_off()
-
     scroll_text(sc)
     while True:
         now = utime.time()
-        # ntw.check(now)
-
-        if ntw.wlan.isconnected():
+        if ntw.check():
             clock.check(now)
             weather.check(now)
-        # google.check(now)
+            # google.check(now)
+
+        localtime = utime.localtime()
+        date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+        time = (
+            "%02d" % localtime[3]
+            + ":"
+            + "%02d" % localtime[4]
+            + ":"
+            + "%02d" % localtime[5]
+        )
+        sc.set_memory(
+            name="date",
+            elem_type="str",
+            content=(1, 0, time + " " + date),
+            update=True,
+            delete=True,
+        )
+
         utime.sleep(const.MAIN_CYCLE_TIME)
 
 

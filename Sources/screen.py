@@ -19,7 +19,7 @@ class Screen_Handler:
         self.screen_width = 128
         self.screen_height = 64
         self.char_width = int(self.screen_width / self.screen_columns)
-        self.char_height = int(self.screen_height / self.screen_spacing)
+        self.char_height = int(self.screen_height / self.screen_spacing) - 1
 
         # For small board uncomment this
         # pin16 = machine.Pin(16, machine.Pin.OUT)
@@ -172,9 +172,13 @@ class Screen_Handler:
         return int(self.screen_height / self.screen_spacing * y)
 
     def pixel_to_width(self, x):
+        # if x % 8 == 0 and x > 0:
+        #    x -= 1
         return int(x / (self.screen_width / self.screen_columns))
 
     def pixel_to_height(self, y):
+        # if y % 8 == 0 and y > 0:
+        #    y -= 1
         return int(y / (self.screen_height / self.screen_spacing))
 
     def reset_zone(self, x1, y1, x2, y2):
@@ -242,37 +246,28 @@ class Screen_Handler:
                     end_page=self.pixel_to_height(y2),
                 )
 
-    # def update_display(self, start_page=0x00, end_page=0x07):
-    #    self.oled.show(start_page, end_page)
-
-    # async def get_async(self):
-    #    while True:
-    #        self.update_display()
-    #        await asyncio.sleep(const.MAIN_CYCLE_TIME)
-
-    def get_async(self):
-        while True:
-            # print("screen update")
-            # Set time
-            localtime = utime.localtime()
-            date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
-            time = (
-                "%02d" % localtime[3]
-                + ":"
-                + "%02d" % localtime[4]
-                + ":"
-                + "%02d" % localtime[5]
-            )
-            self.set_memory(
-                name="date",
-                elem_type="str",
-                content=(1, 0, time + " " + date),
-                update=True,
-                delete=True,
-            )
-            # self.oled.show(start_page=0x06, end_page=0x07)
-            # self.oled.show()
-            utime.sleep(const.MAIN_CYCLE_TIME)
+    # def get_async(self):
+    #     while True:
+    #         # print("screen update")
+    #         # Set time
+    #         localtime = utime.localtime()
+    #         date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+    #         time = (
+    #             "%02d" % localtime[3]
+    #             + ":"
+    #             + "%02d" % localtime[4]
+    #             + ":"
+    #             + "%02d" % localtime[5]
+    #         )
+    #         self.set_memory(
+    #             name="date",
+    #             elem_type="str",
+    #             content=(1, 0, time + " " + date),
+    #             update=True,
+    #             delete=True,
+    #         )
+    #         # self.oled.show()
+    #         utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Screen_element:

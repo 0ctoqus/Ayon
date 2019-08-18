@@ -55,7 +55,6 @@ class Network:
         )
         # self.sc.update_display()
         # self.sc.oled.show(start_page=0x00, end_page=0x01)
-        self.sc.oled.show(start_page=0, end_page=1)
         print("connecting to:", self.ssid, " with password ", self.pswd)
         self.wlan.connect(self.ssid, self.pswd)
 
@@ -107,18 +106,6 @@ class Network:
 
         return self.wlan.isconnected()
 
-    # def get(self):
-    #    self.connected = self.check_connection()
-
-    # async def get_async(self):
-    #    while True:
-    #        if not self.connected and self.get():
-    #            wait_time = self.max_time_check
-    #            print("Connection set")
-    #        else:
-    #            wait_time = const.MAIN_CYCLE_TIME
-    #        await asyncio.sleep(wait_time)
-
     def get_async(self):
         while True:
             if self.check_connection():
@@ -127,6 +114,8 @@ class Network:
                 wait_time = const.MAIN_CYCLE_TIME
             utime.sleep(wait_time)
 
-    def check(self, now):
-        if not self.check_connection():
+    def check(self):
+        connected = self.check_connection()
+        if not connected:
             print("getting ntw")
+        return connected

@@ -1,7 +1,6 @@
 # MicroPython SSD1306 OLED driver, I2C and SPI interfaces
-
-import time
 import framebuf
+import utime
 
 # Scroll
 # https://forum.micropython.org/viewtopic.php?t=2336
@@ -110,12 +109,13 @@ class SSD1306:
         tmp_buffer = self.buffer[1:]
         control = bytearray(1)
         control[0] = 0x40
-        # for i in range(start_page * 128, (end_page + 1) * 128, 16):
-        #    self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
+        for i in range(start_page * 128, (end_page + 1) * 128, 16):
+            self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
+            # utime.sleep(0.0001)
 
-        self.i2c.writeto(
-            self.addr, control + tmp_buffer[start_page * 128 : (end_page + 1) * 128]
-        )
+        # self.i2c.writeto(
+        #    self.addr, control + tmp_buffer[start_page * 128 : (end_page + 1) * 128]
+        # )
 
     def fill(self, col):
         self.framebuf.fill(col)

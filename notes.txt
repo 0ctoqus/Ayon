@@ -1,0 +1,32 @@
+notes
+=====
+
+# https://docs.python.org/3.5/library/_thread.html#module-_thread
+# https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
+# _thread.start_new_thread(google.get, (now,))
+
+# https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
+# https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
+# https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
+
+
+    # loop = asyncio.get_event_loop()
+    # loop.create_task(sc.get_async())
+    # loop.create_task(ntw.get_async())
+    # loop.create_task(clock.get_async())
+    # loop.create_task(weather.get_async())
+    # loop.create_task(google.get_async())
+    # loop.run_forever()
+
+    # _thread.stack_size(1024 * )
+
+    # _thread.start_new_thread(sc.get_async, ())
+    # _thread.start_new_thread(ntw.get_async, ())
+    # _thread.start_new_thread(test, ())
+
+    # sc.oled.hw_scroll_h(direction=True, start_page=0x02, end_page=0x05)
+    # utime.sleep(3)
+    # # scroll left
+    # sc.oled.hw_scroll_h(direction=False, start_page=0x02, end_page=0x05)
+    # utime.sleep(3)
+    # sc.oled.hw_scroll_off()
