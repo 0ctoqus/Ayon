@@ -2,9 +2,6 @@
 import utime
 
 # Local libs
-#
-
-# Local scripts
 from screen import Screen_element
 import consts as const
 

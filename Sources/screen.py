@@ -4,11 +4,9 @@ import utime
 
 # Local libs
 import ssd1306
+import consts as const
 
 # import uasyncio as asyncio
-
-# Local scripts
-import consts as const
 
 
 class Screen_Handler:
@@ -22,12 +20,12 @@ class Screen_Handler:
         self.char_height = int(self.screen_height / self.screen_spacing) - 1
 
         # For small board uncomment this
-        # pin16 = machine.Pin(16, machine.Pin.OUT)
-        # pin16.value(1) # set reset Pin hight
-        # machine.Pin(16, machine.Pin.OUT).value(1)
-        # self.i2c = machine.I2C(scl=machine.Pin(15), sda=machine.Pin(4))
+        pin16 = machine.Pin(16, machine.Pin.OUT)
+        pin16.value(1)  # set reset Pin hight
+        machine.Pin(16, machine.Pin.OUT).value(1)
+        self.i2c = machine.I2C(scl=machine.Pin(15), sda=machine.Pin(4))
 
-        self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
+        # self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
 
         self.oled = ssd1306.SSD1306_I2C(self.screen_width, self.screen_height, self.i2c)
         self.oled.fill(0)

@@ -99,10 +99,11 @@ class SSD1306:
         self.write_cmd(start_page)  # Page start address. (0 = reset)
         self.write_cmd(end_page)  # Page end address.
 
+        # self.write_framebuf()
+
         tmp_buffer = self.buffer[1:]
         control = bytearray(1)
         control[0] = 0x40
-
         # for i in range(start_page * 128, (end_page + 1) * 128, 16):
         #    self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
         #    utime.sleep(0.02)
@@ -110,6 +111,7 @@ class SSD1306:
         self.i2c.writeto(
             self.addr, control + tmp_buffer[start_page * 128 : (end_page + 1) * 128]
         )
+        utime.sleep(0.2)
 
     def fill(self, col):
         self.framebuf.fill(col)
@@ -131,6 +133,10 @@ class SSD1306:
             self.framebuf.fill_rect(x, y, w, h, col)
         else:
             self.framebuf.rect(x, y, w, h, col)
+
+    """
+    # Does not work, srolling create weird glitchs for non scrolling part of the screen.
+    # Also, you can't have more characters than the lenght of the screen moving making this useless.
 
     def hw_scroll_off(self):
         self.write_cmd(SET_HWSCROLL_OFF)  # turn off scroll
@@ -156,29 +162,28 @@ class SSD1306:
         self.write_cmd(0xFF)
         self.write_cmd(SET_HWSCROLL_ON)  # activate scroll
 
-        """
-            # This is for the diagonal scroll, it shows wierd actifacts on the lcd!!
-            def hw_scroll_diag(self, direction=True):   # default to scroll verticle and right
-                self.write_cmd(SET_HWSCROLL_OFF)  # turn off hardware scroll per SSD1306 datasheet
-                if not direction:
-                    self.write_cmd(SET_HWSCROLL_VL)
-                    self.write_cmd(0x00) # dummy byte
-                    self.write_cmd(0x07) # start page = page 7
-                    self.write_cmd(0x00) # frequency = 5 frames
-                    self.write_cmd(0x00) # end page = page 0
-                    self.write_cmd(self.height)
-                else:
-                    self.write_cmd(SET_HWSCROLL_VR)
-                    self.write_cmd(0x00) # dummy byte
-                    self.write_cmd(0x00) # start page = page 0
-                    self.write_cmd(0x00) # frequency = 5 frames
-                    self.write_cmd(0x07) # end page = page 7
-                    self.write_cmd(self.height)
+    # This is for the diagonal scroll, it shows wierd actifacts on the lcd!!
+    def hw_scroll_diag(self, direction=True):   # default to scroll verticle and right
+        self.write_cmd(SET_HWSCROLL_OFF)  # turn off hardware scroll per SSD1306 datasheet
+        if not direction:
+            self.write_cmd(SET_HWSCROLL_VL)
+            self.write_cmd(0x00) # dummy byte
+            self.write_cmd(0x07) # start page = page 7
+            self.write_cmd(0x00) # frequency = 5 frames
+            self.write_cmd(0x00) # end page = page 0
+            self.write_cmd(self.height)
+        else:
+            self.write_cmd(SET_HWSCROLL_VR)
+            self.write_cmd(0x00) # dummy byte
+            self.write_cmd(0x00) # start page = page 0
+            self.write_cmd(0x00) # frequency = 5 frames
+            self.write_cmd(0x07) # end page = page 7
+            self.write_cmd(self.height)
 
-                self.write_cmd(0x00)
-                self.write_cmd(0xff)
-                self.write_cmd(SET_HWSCROLL_ON) # activate scroll
-        """
+        self.write_cmd(0x00)
+        self.write_cmd(0xff)
+        self.write_cmd(SET_HWSCROLL_ON) # activate scroll
+    """
 
 
 class SSD1306_I2C(SSD1306):
@@ -202,6 +207,14 @@ class SSD1306_I2C(SSD1306):
         # Blast out the frame buffer using a single I2C transaction to support
         # hardware I2C interfaces.
         self.i2c.writeto(self.addr, self.buffer)
+
+    # def write_data(self):
+    #     self.temp[0] = self.addr << 1
+    #     self.temp[1] = 0x40  # Co=0, D/C#=1
+    #     self.i2c.start()
+    #     self.i2c.write(self.temp)
+    #     self.i2c.write(self.buffer)
+    #     self.i2c.stop()
 
     def poweron(self):
         pass

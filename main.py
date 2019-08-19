@@ -1,19 +1,19 @@
 # Libs
 import machine
 import utime
+import sys
+
+sys.path.append("Sources")
 
 # Local libs
 # import esp32
 # import _thread
 # import uasyncio as asyncio
-
-# Local scripts
+# from google import Google
 from screen import Screen_element
 from screen import Screen_Handler
 from internet import Network
 import consts as const
-
-# from google import Google
 
 
 class Clock(Screen_element):
@@ -117,46 +117,52 @@ class Weather(Screen_element):
         return result
 
 
-def scroll_text(sc):
-    sc.set_memory(
-        name="test", elem_type="str", content=(0, 2, "Hello world"), update=False
+# def scroll_text(sc):
+#     sc.set_memory(
+#         name="testtest",
+#         elem_type="str",
+#         content=(0, 2, "123456789ABCDEFGHIJKLM"),
+#         update=False,
+#     )
+#     sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
+#     sc.oled.show(start_page=0x02, end_page=0x02)
+
+
+def update_clock(sc):
+    localtime = utime.localtime()
+    date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+    time = (
+        "%02d" % localtime[3]
+        + ":"
+        + "%02d" % localtime[4]
+        + ":"
+        + "%02d" % localtime[5]
     )
-    sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
-    sc.oled.show(start_page=0x02, end_page=0x02)
+    sc.set_memory(
+        name="date",
+        elem_type="str",
+        content=(1, 0, time + " " + date),
+        update=True,
+        delete=True,
+    )
 
 
 def main():
+    print("Running Ayon")
     sc = Screen_Handler()
     ntw = Network(sc, const.NTW_CHECK_TIME)
     clock = Clock(ntw, sc, const.CLOCK_TIME_CHECK)
     weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
     # google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
 
-    scroll_text(sc)
+    # scroll_text(sc)
     while True:
         now = utime.time()
         if ntw.check():
             clock.check(now)
             weather.check(now)
-            # google.check(now)
-
-        localtime = utime.localtime()
-        date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
-        time = (
-            "%02d" % localtime[3]
-            + ":"
-            + "%02d" % localtime[4]
-            + ":"
-            + "%02d" % localtime[5]
-        )
-        sc.set_memory(
-            name="date",
-            elem_type="str",
-            content=(1, 0, time + " " + date),
-            update=True,
-            delete=True,
-        )
-
+        # google.check(now)
+        update_clock(sc)
         utime.sleep(const.MAIN_CYCLE_TIME)
 
 

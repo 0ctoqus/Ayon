@@ -1,13 +1,24 @@
-notes
+Notes
 =====
 
-# https://docs.python.org/3.5/library/_thread.html#module-_thread
-# https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
+Threads
+-------
+https://docs.python.org/3.5/library/_thread.html#module-_thread
+https://github.com/loboris/MicroPython_ESP32_psRAM_LoBo/wiki/thread_example_1
 # _thread.start_new_thread(google.get, (now,))
 
-# https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
-# https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
-# https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
+Uasyncio
+--------
+https://github.com/peterhinch/micropython-async/blob/master/TUTORIAL.md#01-installing-uasyncio-on-bare-metal
+https://forum.micropython.org/viewtopic.php?f=2&t=2876&start=10
+https://github.com/peterhinch/micropython-mqtt/tree/master/mqtt_as
+
+Oled
+----
+https://github.com/adafruit/Adafruit_Python_SSD1306/blob/master/Adafruit_SSD1306/SSD1306.py
+https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+https://forum.micropython.org/viewtopic.php?t=2336
+https://github.com/timotet/SSD1306
 
 
     # loop = asyncio.get_event_loop()
