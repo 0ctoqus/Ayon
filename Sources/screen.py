@@ -3,7 +3,7 @@ import machine
 import utime
 
 # Local libs
-import ssd1306
+from ssd1306 import SSD1306
 import consts as const
 
 # import uasyncio as asyncio
@@ -27,7 +27,7 @@ class Screen_Handler:
 
         # self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
 
-        self.oled = ssd1306.SSD1306_I2C(self.screen_width, self.screen_height, self.i2c)
+        self.oled = SSD1306(self.screen_width, self.screen_height, self.i2c)
         self.oled.fill(0)
         self.memory_index = {}
 

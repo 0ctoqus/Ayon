@@ -20,16 +20,25 @@ SET_DISP_CLK_DIV = const(0xD5)
 SET_PRECHARGE = const(0xD9)
 SET_VCOM_DESEL = const(0xDB)
 SET_CHARGE_PUMP = const(0x8D)
-SET_HWSCROLL_OFF = const(0x2E)
-SET_HWSCROLL_ON = const(0x2F)
-SET_HWSCROLL_RIGHT = const(0x26)
-SET_HWSCROLL_LEFT = const(0x27)
+# SET_HWSCROLL_OFF = const(0x2E)
+# SET_HWSCROLL_ON = const(0x2F)
+# SET_HWSCROLL_RIGHT = const(0x26)
+# SET_HWSCROLL_LEFT = const(0x27)
 # SET_HWSCROLL_VR     = const(0x29)
 # SET_HWSCROLL_VL     = const(0x2a)
 
 
 class SSD1306:
-    def __init__(self, width, height, external_vcc):
+    def __init__(self, width, height, i2c, addr=0x3C, external_vcc=False):
+        self.i2c = i2c
+        self.addr = addr
+        self.temp = bytearray(2)
+        self.buffer = bytearray(((height // 8) * width) + 1)
+        self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
+        self.framebuf = framebuf.FrameBuffer1(
+            memoryview(self.buffer)[1:], width, height
+        )
+
         self.width = width
         self.height = height
         self.external_vcc = external_vcc
@@ -119,9 +128,6 @@ class SSD1306:
     def pixel(self, x, y, col):
         self.framebuf.pixel(x, y, col)
 
-    def scroll(self, dx, dy):
-        self.framebuf.scroll(dx, dy)
-
     def text(self, string, x, y, col=1):
         self.framebuf.text(string, x, y, col)
 
@@ -134,7 +140,23 @@ class SSD1306:
         else:
             self.framebuf.rect(x, y, w, h, col)
 
+    def write_cmd(self, cmd):
+        self.temp[0] = 0x80  # Co=1, D/C#=0
+        self.temp[1] = cmd
+        self.i2c.writeto(self.addr, self.temp)
+
+    def write_framebuf(self):
+        # Blast out the frame buffer using a single I2C transaction to support
+        # hardware I2C interfaces.
+        self.i2c.writeto(self.addr, self.buffer)
+
+    def poweron(self):
+        pass
+
     """
+    def scroll(self, dx, dy):
+        self.framebuf.scroll(dx, dy)
+
     # Does not work, srolling create weird glitchs for non scrolling part of the screen.
     # Also, you can't have more characters than the lenght of the screen moving making this useless.
 
@@ -184,37 +206,3 @@ class SSD1306:
         self.write_cmd(0xff)
         self.write_cmd(SET_HWSCROLL_ON) # activate scroll
     """
-
-
-class SSD1306_I2C(SSD1306):
-    def __init__(self, width, height, i2c, addr=0x3C, external_vcc=False):
-        self.i2c = i2c
-        self.addr = addr
-        self.temp = bytearray(2)
-        self.buffer = bytearray(((height // 8) * width) + 1)
-        self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
-        self.framebuf = framebuf.FrameBuffer1(
-            memoryview(self.buffer)[1:], width, height
-        )
-        super().__init__(width, height, external_vcc)
-
-    def write_cmd(self, cmd):
-        self.temp[0] = 0x80  # Co=1, D/C#=0
-        self.temp[1] = cmd
-        self.i2c.writeto(self.addr, self.temp)
-
-    def write_framebuf(self):
-        # Blast out the frame buffer using a single I2C transaction to support
-        # hardware I2C interfaces.
-        self.i2c.writeto(self.addr, self.buffer)
-
-    # def write_data(self):
-    #     self.temp[0] = self.addr << 1
-    #     self.temp[1] = 0x40  # Co=0, D/C#=1
-    #     self.i2c.start()
-    #     self.i2c.write(self.temp)
-    #     self.i2c.write(self.buffer)
-    #     self.i2c.stop()
-
-    def poweron(self):
-        pass
