@@ -28,35 +28,15 @@ SET_CHARGE_PUMP = const(0x8D)
 # SET_HWSCROLL_VL     = const(0x2a)
 
 
-class framebuf_elem:
+class Element:
     def __init__(self, x, y, width, height):
+        print("creating element", x, y, width, height)
         self.buffer = bytearray((height // 8) * width)
         self.framebuf = framebuf.FrameBuffer1(memoryview(self.buffer), width, height)
         self.width = width
         self.height = height
         self.x = x
         self.y = y
-
-    def fill(self, col):
-        self.framebuf.fill(col)
-
-    def pixel(self, x, y, col):
-        self.framebuf.pixel(x, y, col)
-
-    def text(self, string, x, y, col=1):
-        self.framebuf.text(string, x, y, col)
-
-    def line(self, x1, y1, x2, y2, col=1):
-        self.framebuf.line(x1, y1, x2, y2, col)
-
-    def scroll(self, dx, dy):
-        self.framebuf.scroll(dx, dy)
-
-    def rect(self, x, y, w, h, fill=True, col=1):
-        if fill:
-            self.framebuf.fill_rect(x, y, w, h, col)
-        else:
-            self.framebuf.rect(x, y, w, h, col)
 
 
 class SSD1306:
@@ -113,9 +93,6 @@ class SSD1306:
         self.fill(0)
         self.show()
 
-        print(self.framebuf)
-        # print(len(self.framebuf), len(self.framebuf[0]))
-
     def poweroff(self):
         self.write_cmd(SET_DISP | 0x00)
 
@@ -165,9 +142,57 @@ class SSD1306:
         # hardware I2C interfaces.
         self.i2c.writeto(self.addr, self.buffer)
 
-    def merge_framebuff(self, framebuf_elem):
-        for y in range(self.height):
-            framebuf_elem.framebuf[y * 128 : (y + 1) * 128]
+    def merge_framebuff(self, element):
+        control = bytearray(1)
+        control[0] = 0x40
+        print("merging element")
+        print("Initiel size =", len(self.buffer[1:]))
+        for y in range(element.height):
+            elem_bytes = element.buffer[y * element.width : (y + 1) * element.width]
+            start_bytes = self.buffer[1:][: element.y * element.x]
+            end_bytes = self.buffer[1:][(element.y + 1) * element.x + len(elem_bytes) :]
+            """
+            print(
+                "line", y, y * element.width, (y + 1) * element.width, len(elem_bytes)
+            )
+            print(
+                len(start_bytes),
+                "+",
+                len(elem_bytes),
+                "+",
+                len(end_bytes),
+                "=",
+                len(start_bytes + elem_bytes + end_bytes),
+            )
+            """
+            self.buffer = control + start_bytes + elem_bytes + end_bytes
+        print("done merging")
+
+    def fill(self, col):
+        self.framebuf.fill(col)
+
+    def pixel(self, element, x, y, col):
+        print("pixel")
+        element.framebuf.pixel(x, y, col)
+
+    def text(self, element, string, x, y, col=1):
+        print("text")
+        element.framebuf.text(string, x, y, col)
+
+    def line(self, element, x1, y1, x2, y2, col=1):
+        print("line")
+        element.framebuf.line(x1, y1, x2, y2, col)
+
+    def scroll(self, element, dx, dy):
+        print("scroll")
+        element.framebuf.scroll(dx, dy)
+
+    def rect(self, element, x, y, w, h, fill=True, col=1):
+        print("rect")
+        if fill:
+            element.framebuf.fill_rect(x, y, w, h, col)
+        else:
+            element.framebuf.rect(x, y, w, h, col)
 
     def poweron(self):
         pass

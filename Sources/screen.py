@@ -4,6 +4,7 @@ import utime
 
 # Local libs
 from ssd1306 import SSD1306
+from ssd1306 import Element
 import consts as const
 
 # import uasyncio as asyncio
@@ -141,7 +142,7 @@ class Screen_Handler:
             content=(
                 0,
                 self.height_to_pixel(2) - 7,
-                self.width_to_pixel(17),
+                self.width_to_pixel(16),
                 self.height_to_pixel(2) - 5,
                 True,
                 1,
@@ -156,7 +157,7 @@ class Screen_Handler:
             content=(
                 0,
                 self.height_to_pixel(6) + 5,
-                self.width_to_pixel(17),
+                self.width_to_pixel(16),
                 self.height_to_pixel(6) + 7,
                 True,
                 1,
@@ -180,8 +181,10 @@ class Screen_Handler:
         #    y -= 1
         return int(y / (self.screen_height / self.screen_spacing))
 
-    def reset_zone(self, x1, y1, x2, y2):
-        self.oled.rect(x1, y1, x2 - x1, y2 - y1, True, 0)
+    # def reset_zone(self, x1, y1, x2, y2):
+    #    element = Element(x1, y1, x2 - x1, y2 - y1)
+    #    self.oled.rect(element, x1, y1, x2 - x1, y2 - y1, True, 0)
+    #    self.oled.merge_framebuff(element)
 
     # x, y, string
     def display_str(self, elem):
@@ -192,8 +195,11 @@ class Screen_Handler:
         x2 = (len(string) + 1) * self.char_width
         y2 = y1 + self.char_height
 
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.text(string, x1, y1)
+        # self.reset_zone(x1, y1, x2, y2)
+
+        element = Element(x1, y1, x2 - x1, 8)
+        self.oled.text(element, string, x1, y1)
+        self.oled.merge_framebuff(element)
         return (x1, y1, x2, y2)
 
     # x, y, content_name
@@ -202,30 +208,37 @@ class Screen_Handler:
         x1 = self.width_to_pixel(x)
         y1 = self.height_to_pixel(y)
         art = self.pixel_art[content_name]
-        self.reset_zone(x1, y1, len(art[0]), len(art))
+        # self.reset_zone(x1, y1, len(art[0]), len(art))
         y2 = y1
+
+        element = Element(x1, y1, len(art[0]), len(art))
         for pixel_str in self.pixel_art[content_name]:
             x2 = x1
             for pixel in pixel_str:
                 if pixel == "1":
-                    self.oled.pixel(x2, y2, 1)
+                    self.oled.pixel(element, x2, y2, 1)
                 x2 += 1
             y2 += 1
+        self.oled.merge_framebuff(element)
         return (x1, y1, x2, y2)
 
     # x1, y1, x2, y2
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.line(x1, y1, x2, y2)
+        # self.reset_zone(x1, y1, x2, y2)
+        element = Element(x1, y1, x2 - x1, 8)
+        self.oled.line(element, x1, y1, x2, y2)
+        self.oled.merge_framebuff(element)
         # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
 
     # x1, y1, x2, y2, fill, col
     def display_rect(self, elem):
         x1, y1, x2, y2, fill, col = elem
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.rect(x1, y1, x2 - x1, y2 - y1, fill, col)
+        # self.reset_zone(x1, y1, x2, y2)
+        element = Element(x1, y1, x2 - x1, 8)
+        self.oled.rect(element, x1, y1, x2 - x1, y2 - y1, fill, col)
+        self.oled.merge_framebuff(element)
         # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
 
@@ -233,7 +246,7 @@ class Screen_Handler:
         # Delete element
         if delete and name in self.memory_index:
             x1, y1, x2, y2 = self.memory_index[name]
-            self.reset_zone(x1, y1, x2, y2)
+            # self.reset_zone(x1, y1, x2, y2)
             del self.memory_index[name]
         if elem_type is not None and content is not None:
             # elems = tuple(list(content))
