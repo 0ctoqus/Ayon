@@ -21,7 +21,8 @@ class Screen_Handler:
 
         # For small board uncomment this
         pin16 = machine.Pin(16, machine.Pin.OUT)
-        pin16.value(1)  # set reset Pin hight
+        # set reset Pin hight
+        pin16.value(1)
         machine.Pin(16, machine.Pin.OUT).value(1)
         self.i2c = machine.I2C(scl=machine.Pin(15), sda=machine.Pin(4))
 

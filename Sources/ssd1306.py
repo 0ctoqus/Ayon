@@ -28,6 +28,37 @@ SET_CHARGE_PUMP = const(0x8D)
 # SET_HWSCROLL_VL     = const(0x2a)
 
 
+class framebuf_elem:
+    def __init__(self, x, y, width, height):
+        self.buffer = bytearray((height // 8) * width)
+        self.framebuf = framebuf.FrameBuffer1(memoryview(self.buffer), width, height)
+        self.width = width
+        self.height = height
+        self.x = x
+        self.y = y
+
+    def fill(self, col):
+        self.framebuf.fill(col)
+
+    def pixel(self, x, y, col):
+        self.framebuf.pixel(x, y, col)
+
+    def text(self, string, x, y, col=1):
+        self.framebuf.text(string, x, y, col)
+
+    def line(self, x1, y1, x2, y2, col=1):
+        self.framebuf.line(x1, y1, x2, y2, col)
+
+    def scroll(self, dx, dy):
+        self.framebuf.scroll(dx, dy)
+
+    def rect(self, x, y, w, h, fill=True, col=1):
+        if fill:
+            self.framebuf.fill_rect(x, y, w, h, col)
+        else:
+            self.framebuf.rect(x, y, w, h, col)
+
+
 class SSD1306:
     def __init__(self, width, height, i2c, addr=0x3C, external_vcc=False):
         self.i2c = i2c
@@ -82,6 +113,9 @@ class SSD1306:
         self.fill(0)
         self.show()
 
+        print(self.framebuf)
+        # print(len(self.framebuf), len(self.framebuf[0]))
+
     def poweroff(self):
         self.write_cmd(SET_DISP | 0x00)
 
@@ -109,19 +143,36 @@ class SSD1306:
         self.write_cmd(end_page)  # Page end address.
 
         # self.write_framebuf()
-
-        tmp_buffer = self.buffer[1:]
-        control = bytearray(1)
-        control[0] = 0x40
+        # tmp_buffer = self.buffer[1:]
         # for i in range(start_page * 128, (end_page + 1) * 128, 16):
         #    self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
         #    utime.sleep(0.02)
 
+        control = bytearray(1)
+        control[0] = 0x40
         self.i2c.writeto(
-            self.addr, control + tmp_buffer[start_page * 128 : (end_page + 1) * 128]
+            self.addr,
+            control + self.buffer[1:][start_page * 128 : (end_page + 1) * 128],
         )
-        utime.sleep(0.2)
 
+    def write_cmd(self, cmd):
+        self.temp[0] = 0x80  # Co=1, D/C#=0
+        self.temp[1] = cmd
+        self.i2c.writeto(self.addr, self.temp)
+
+    def write_framebuf(self):
+        # Blast out the frame buffer using a single I2C transaction to support
+        # hardware I2C interfaces.
+        self.i2c.writeto(self.addr, self.buffer)
+
+    def merge_framebuff(self, framebuf_elem):
+        for y in range(self.height):
+            framebuf_elem.framebuf[y * 128 : (y + 1) * 128]
+
+    def poweron(self):
+        pass
+
+    """
     def fill(self, col):
         self.framebuf.fill(col)
 
@@ -134,28 +185,14 @@ class SSD1306:
     def line(self, x1, y1, x2, y2, col=1):
         self.framebuf.line(x1, y1, x2, y2, col)
 
+    def scroll(self, dx, dy):
+        self.framebuf.scroll(dx, dy)
+
     def rect(self, x, y, w, h, fill=True, col=1):
         if fill:
             self.framebuf.fill_rect(x, y, w, h, col)
         else:
             self.framebuf.rect(x, y, w, h, col)
-
-    def write_cmd(self, cmd):
-        self.temp[0] = 0x80  # Co=1, D/C#=0
-        self.temp[1] = cmd
-        self.i2c.writeto(self.addr, self.temp)
-
-    def write_framebuf(self):
-        # Blast out the frame buffer using a single I2C transaction to support
-        # hardware I2C interfaces.
-        self.i2c.writeto(self.addr, self.buffer)
-
-    def poweron(self):
-        pass
-
-    """
-    def scroll(self, dx, dy):
-        self.framebuf.scroll(dx, dy)
 
     # Does not work, srolling create weird glitchs for non scrolling part of the screen.
     # Also, you can't have more characters than the lenght of the screen moving making this useless.
@@ -205,4 +242,14 @@ class SSD1306:
         self.write_cmd(0x00)
         self.write_cmd(0xff)
         self.write_cmd(SET_HWSCROLL_ON) # activate scroll
+
+    def scroll_text(sc):
+        sc.set_memory(
+            name="testtest",
+            elem_type="str",
+            content=(0, 2, "123456789ABCDEFGHIJKLM"),
+            update=False,
+        )
+        sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
+        sc.oled.show(start_page=0x02, end_page=0x02)
     """

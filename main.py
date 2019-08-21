@@ -117,17 +117,6 @@ class Weather(Screen_element):
         return result
 
 
-# def scroll_text(sc):
-#     sc.set_memory(
-#         name="testtest",
-#         elem_type="str",
-#         content=(0, 2, "123456789ABCDEFGHIJKLM"),
-#         update=False,
-#     )
-#     sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
-#     sc.oled.show(start_page=0x02, end_page=0x02)
-
-
 def update_clock(sc):
     localtime = utime.localtime()
     date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
