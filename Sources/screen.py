@@ -13,6 +13,7 @@ import consts as const
 class Screen_Handler:
     def __init__(self):
         # Constants
+        print("Init screen Screen_Handler")
         self.screen_columns = 16
         self.screen_spacing = 8
         self.screen_width = 128
@@ -20,6 +21,7 @@ class Screen_Handler:
         self.char_width = int(self.screen_width / self.screen_columns)
         self.char_height = int(self.screen_height / self.screen_spacing) - 1
 
+        print("I2C setup")
         # For small board uncomment this
         pin16 = machine.Pin(16, machine.Pin.OUT)
         # set reset Pin hight
@@ -29,6 +31,7 @@ class Screen_Handler:
 
         # self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
 
+        print("OLED setup")
         self.oled = SSD1306(self.screen_width, self.screen_height, self.i2c)
         self.oled.fill(0)
         self.memory_index = {}
@@ -198,7 +201,7 @@ class Screen_Handler:
         # self.reset_zone(x1, y1, x2, y2)
 
         element = Element(x1, y1, x2 - x1, 8)
-        self.oled.text(element, string, x1, y1)
+        self.oled.text(element, string, 0, 0)
         self.oled.merge_framebuff(element)
         return (x1, y1, x2, y2)
 
@@ -209,11 +212,11 @@ class Screen_Handler:
         y1 = self.height_to_pixel(y)
         art = self.pixel_art[content_name]
         # self.reset_zone(x1, y1, len(art[0]), len(art))
-        y2 = y1
 
+        y2 = 0
         element = Element(x1, y1, len(art[0]), len(art))
         for pixel_str in self.pixel_art[content_name]:
-            x2 = x1
+            x2 = 0
             for pixel in pixel_str:
                 if pixel == "1":
                     self.oled.pixel(element, x2, y2, 1)
@@ -226,8 +229,8 @@ class Screen_Handler:
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
         # self.reset_zone(x1, y1, x2, y2)
-        element = Element(x1, y1, x2 - x1, 8)
-        self.oled.line(element, x1, y1, x2, y2)
+        element = Element(x1, y1, x2 - x1, y2 - y1)
+        self.oled.line(element, 0, 0, x2 - x1, y2 - y1)
         self.oled.merge_framebuff(element)
         # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
@@ -236,8 +239,8 @@ class Screen_Handler:
     def display_rect(self, elem):
         x1, y1, x2, y2, fill, col = elem
         # self.reset_zone(x1, y1, x2, y2)
-        element = Element(x1, y1, x2 - x1, 8)
-        self.oled.rect(element, x1, y1, x2 - x1, y2 - y1, fill, col)
+        element = Element(x1, y1, x2 - x1, y2 - y1)
+        self.oled.rect(element, 0, 0, x2 - x1, y2 - y1, fill, col)
         self.oled.merge_framebuff(element)
         # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)

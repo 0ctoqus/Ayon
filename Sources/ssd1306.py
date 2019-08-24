@@ -1,6 +1,8 @@
 # MicroPython SSD1306 OLED driver, I2C and SPI interfaces
 import framebuf
-import utime
+
+# import utime
+from math import ceil
 
 # register definitions
 SET_CONTRAST = const(0x81)
@@ -30,13 +32,30 @@ SET_CHARGE_PUMP = const(0x8D)
 
 class Element:
     def __init__(self, x, y, width, height):
-        print("creating element", x, y, width, height)
-        self.buffer = bytearray((height // 8) * width)
-        self.framebuf = framebuf.FrameBuffer1(memoryview(self.buffer), width, height)
+        width = int(ceil(width / 8.0)) * 8
+        height = int(ceil(height / 8.0)) * 8
+
+        self.buffer = bytearray(height * width // 8)
+        print("bytes", len(memoryview(self.buffer)))
+        self.framebuf = framebuf.FrameBuffer1(
+            memoryview(self.buffer), width, height, framebuf.MONO_HMSB
+        )
+        self.framebuf.fill(0)
         self.width = width
         self.height = height
         self.x = x
         self.y = y
+        print(
+            "creating element",
+            "x",
+            self.x,
+            "y",
+            self.y,
+            "w",
+            self.width,
+            "h",
+            self.height,
+        )
 
 
 class SSD1306:
@@ -47,7 +66,7 @@ class SSD1306:
         self.buffer = bytearray(((height // 8) * width) + 1)
         self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
         self.framebuf = framebuf.FrameBuffer1(
-            memoryview(self.buffer)[1:], width, height
+            memoryview(self.buffer)[1:], width, height, framebuf.MONO_HMSB
         )
 
         self.width = width
@@ -129,7 +148,8 @@ class SSD1306:
         control[0] = 0x40
         self.i2c.writeto(
             self.addr,
-            control + self.buffer[1:][start_page * 128 : (end_page + 1) * 128],
+            control
+            + self.buffer[1:][start_page * self.width : (end_page + 1) * self.width],
         )
 
     def write_cmd(self, cmd):
@@ -143,52 +163,68 @@ class SSD1306:
         self.i2c.writeto(self.addr, self.buffer)
 
     def merge_framebuff(self, element):
-        control = bytearray(1)
-        control[0] = 0x40
-        print("merging element")
-        print("Initiel size =", len(self.buffer[1:]))
-        for y in range(element.height):
-            elem_bytes = element.buffer[y * element.width : (y + 1) * element.width]
-            start_bytes = self.buffer[1:][: element.y * element.x]
-            end_bytes = self.buffer[1:][(element.y + 1) * element.x + len(elem_bytes) :]
-            """
-            print(
-                "line", y, y * element.width, (y + 1) * element.width, len(elem_bytes)
-            )
-            print(
-                len(start_bytes),
-                "+",
-                len(elem_bytes),
-                "+",
-                len(end_bytes),
-                "=",
-                len(start_bytes + elem_bytes + end_bytes),
-            )
-            """
-            self.buffer = control + start_bytes + elem_bytes + end_bytes
-        print("done merging")
+        print("blit at pos", element.x, element.y)
+        self.framebuf.blit(element.framebuf, element.x, element.y)
+
+        # control = bytearray(1)
+        # control[0] = 0x40
+        # print("merging element")
+        # print(
+        #    "Initial buffer size =",
+        #    len(self.buffer[1:]),
+        #    "element =",
+        #    len(element.buffer),
+        # )
+        # convertir position en pixel en bytes
+        # for y in range(element.height):
+        #     print(
+        #         "element from", y * (element.width // 8), (y + 1) * (element.width // 8)
+        #     )
+        #     elem_bytes = element.buffer[
+        #         y * (element.width // 8) : (y + 1) * (element.width // 8)
+        #     ]
+        #
+        #     offset = element.y * self.width // 8 + element.x // 8
+        #     start_bytes = self.buffer[1:][:offset]
+        #     end_bytes = self.buffer[1:][offset + len(elem_bytes) :]
+        #
+        #     print(
+        #         offset,
+        #         ":",
+        #         len(start_bytes),
+        #         "+",
+        #         len(elem_bytes),
+        #         "+",
+        #         len(end_bytes),
+        #         "=",
+        #         len(start_bytes + elem_bytes + end_bytes),
+        #         ":",
+        #         offset + len(elem_bytes),
+        #     )
+        #     self.buffer = control + start_bytes + elem_bytes + end_bytes
+        # print("done merging")
 
     def fill(self, col):
         self.framebuf.fill(col)
 
     def pixel(self, element, x, y, col):
-        print("pixel")
+        print("pixel:", x, y)
         element.framebuf.pixel(x, y, col)
 
     def text(self, element, string, x, y, col=1):
-        print("text")
+        print("text:", string, x, y)
         element.framebuf.text(string, x, y, col)
 
     def line(self, element, x1, y1, x2, y2, col=1):
-        print("line")
+        print("line:", x1, y1, x2, y2)
         element.framebuf.line(x1, y1, x2, y2, col)
 
     def scroll(self, element, dx, dy):
-        print("scroll")
+        print("scroll:", dx, dy)
         element.framebuf.scroll(dx, dy)
 
     def rect(self, element, x, y, w, h, fill=True, col=1):
-        print("rect")
+        print("rect:", x, y, w, h)
         if fill:
             element.framebuf.fill_rect(x, y, w, h, col)
         else:
