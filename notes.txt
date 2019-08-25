@@ -41,3 +41,65 @@ https://github.com/timotet/SSD1306
     # sc.oled.hw_scroll_h(direction=False, start_page=0x02, end_page=0x05)
     # utime.sleep(3)
     # sc.oled.hw_scroll_off()
+
+
+
+Hardware scroll does not work, srolling create weird glitchs for non scrolling part of the screen.
+Also, you can't have more characters than the lenght of the screen moving making this useless.
+
+    def hw_scroll_off(self):
+        self.write_cmd(SET_HWSCROLL_OFF)  # turn off scroll
+
+    def hw_scroll_h(self, direction=True, start_page=0x00, end_page=0x07):
+        # default to scroll right
+        self.write_cmd(SET_HWSCROLL_OFF)
+        # turn off hardware scroll per SSD1306 datasheet
+        if not direction:
+            self.write_cmd(SET_HWSCROLL_LEFT)
+            self.write_cmd(0x00)  # dummy byte
+            self.write_cmd(start_page)  # start page = page 7
+            self.write_cmd(0x00)  # frequency = 5 frames
+            self.write_cmd(end_page)  # end page = page 0
+        else:
+            self.write_cmd(SET_HWSCROLL_RIGHT)
+            self.write_cmd(0x00)  # dummy byte
+            self.write_cmd(start_page)  # start page = page 0
+            self.write_cmd(0x00)  # frequency = 5 frames
+            self.write_cmd(end_page)  # end page = page 7
+
+        self.write_cmd(0x00)
+        self.write_cmd(0xFF)
+        self.write_cmd(SET_HWSCROLL_ON)  # activate scroll
+
+    # This is for the diagonal scroll, it shows wierd actifacts on the lcd!!
+    def hw_scroll_diag(self, direction=True):   # default to scroll verticle and right
+        self.write_cmd(SET_HWSCROLL_OFF)  # turn off hardware scroll per SSD1306 datasheet
+        if not direction:
+            self.write_cmd(SET_HWSCROLL_VL)
+            self.write_cmd(0x00) # dummy byte
+            self.write_cmd(0x07) # start page = page 7
+            self.write_cmd(0x00) # frequency = 5 frames
+            self.write_cmd(0x00) # end page = page 0
+            self.write_cmd(self.height)
+        else:
+            self.write_cmd(SET_HWSCROLL_VR)
+            self.write_cmd(0x00) # dummy byte
+            self.write_cmd(0x00) # start page = page 0
+            self.write_cmd(0x00) # frequency = 5 frames
+            self.write_cmd(0x07) # end page = page 7
+            self.write_cmd(self.height)
+
+        self.write_cmd(0x00)
+        self.write_cmd(0xff)
+        self.write_cmd(SET_HWSCROLL_ON) # activate scroll
+
+    def scroll_text(sc):
+        sc.set_memory(
+            name="testtest",
+            elem_type="str",
+            content=(0, 2, "123456789ABCDEFGHIJKLM"),
+            update=False,
+        )
+        sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
+        sc.oled.show(start_page=0x02, end_page=0x02)
+    """

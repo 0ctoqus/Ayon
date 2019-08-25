@@ -46,13 +46,8 @@ class Network:
 
     def connect(self):
         self.sc.set_memory(
-            name="connection_status",
-            elem_type="pixel",
-            content=(0, 0, "cross"),
-            update=True,
+            name="connection_status", elem_type="pixel", content=(0, 0, "cross")
         )
-        # self.sc.update_display()
-        # self.sc.oled.show(start_page=0x00, end_page=0x01)
         print("connecting to:", self.ssid, " with password ", self.pswd)
         self.wlan.connect(self.ssid, self.pswd)
 
@@ -95,10 +90,7 @@ class Network:
                 self.ip = self.wlan.ifconfig()
                 print("network config:", self.ip)
                 self.sc.set_memory(
-                    name="connection_status",
-                    elem_type="pixel",
-                    content=(0, 0, "check"),
-                    update=True,
+                    name="connection_status", elem_type="pixel", content=(0, 0, "check")
                 )
                 self.trying_to_connect = False
 

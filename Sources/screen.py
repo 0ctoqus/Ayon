@@ -143,7 +143,7 @@ class Screen_Handler:
             name="line_top",
             elem_type="rect",
             content=(0, self.height_to_pixel(2) - 7, self.screen_width, 2, True, 1),
-            update=True,
+            # update=True,
         )
 
         # Bottom line
@@ -151,7 +151,7 @@ class Screen_Handler:
             name="line_bottom",
             elem_type="rect",
             content=(0, self.height_to_pixel(6) + 5, self.screen_width, 2, True, 1),
-            update=True,
+            # update=True,
         )
 
     def width_to_pixel(self, x):
@@ -166,26 +166,17 @@ class Screen_Handler:
     def pixel_to_height(self, y):
         return int(y / (self.screen_height / self.screen_spacing))
 
-    # def reset_zone(self, x1, y1, x2, y2):
-    #    segment = Segment(x1, y1, x2 - x1, y2 - y1)
-    #    self.oled.rect(segment, x1, y1, x2 - x1, y2 - y1, True, 0)
-    #    self.oled.merge_framebuff(segment)
-
     # x, y, string
     def display_str(self, elem):
         x, y, string = elem
         x1 = self.width_to_pixel(x)
         y1 = self.height_to_pixel(y)
-
         x2 = (len(string) + 1) * self.char_width
         y2 = y1 + self.char_height
 
-        # self.reset_zone(x1, y1, x2, y2)
-
         segment = Segment(x1, y1, x2 - x1, y2 - y1)
         self.oled.text(segment, string)
-        self.oled.merge_framebuff(segment)
-        return (x1, y1, x2, y2)
+        return segment
 
     # x, y, content_name
     def display_pixel(self, elem):
@@ -193,7 +184,6 @@ class Screen_Handler:
         x1 = self.width_to_pixel(x)
         y1 = self.height_to_pixel(y)
         art = self.pixel_art[content_name]
-        # self.reset_zone(x1, y1, len(art[0]), len(art))
 
         y2 = 0
         segment = Segment(x1, y1, len(art[0]), len(art))
@@ -204,39 +194,41 @@ class Screen_Handler:
                     self.oled.pixel(segment, x2, y2, 1)
                 x2 += 1
             y2 += 1
-        self.oled.merge_framebuff(segment)
-        return (x1, y1, x2, y2)
+        return segment
 
     # x1, y1, x2, y2
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
-        # self.reset_zone(x1, y1, x2, y2)
         segment = Segment(x1, y1, x2 - x1, y2 - y1)
         self.oled.line(segment, x2, y2)
-        self.oled.merge_framebuff(segment)
-        # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
-        return (x1, y1, x2, y2)
+        return segment
 
     # x, y, width, height, fill, col
     def display_rect(self, elem):
         x, y, width, height, fill, col = elem
-        # self.reset_zone(x1, y1, x2, y2)
         segment = Segment(x, y, width, height)
         self.oled.rect(segment, width, height, fill, col)
-        self.oled.merge_framebuff(segment)
-        return (x, y, x + width, y + height)
+        return segment
 
-    def set_memory(self, name, elem_type=None, content=None, update=True, delete=False):
-        # Delete element
-        if delete and name in self.memory_index:
-            x1, y1, x2, y2 = self.memory_index[name]
-            # self.reset_zone(x1, y1, x2, y2)
-            del self.memory_index[name]
+    def set_memory(
+        self, name, elem_type=None, content=None, scroll=False, delete=False
+    ):
+        # Reset zone and delete element if needed
+        if (delete or scroll) and name in self.memory_index:
+            self.oled.reset_zone(self.memory_index[name])
+            if delete or self.memory_index[name].needs_reset:
+                del self.memory_index[name]
+
+        # Create element if needed and display
         if elem_type is not None and content is not None:
-            x1, y1, x2, y2 = self.displayables[elem_type](content)
-            self.memory_index[name] = (x1, y1, x2, y2)
-            if update:
-                self.oled.show()
+            if name not in self.memory_index:
+                segment = self.displayables[elem_type](content)
+            else:
+                segment = self.memory_index[name]
+            self.oled.merge_framebuff(segment)
+            if scroll:
+                self.oled.scroll(segment)
+            self.memory_index[name] = segment
 
         # def get_async(self):
         #     while True:

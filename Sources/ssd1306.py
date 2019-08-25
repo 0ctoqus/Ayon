@@ -2,7 +2,6 @@
 
 import time
 import framebuf
-
 from math import ceil
 
 
@@ -33,28 +32,19 @@ class Segment:
         height = int(ceil(height / 8.0)) * 8
 
         self.buffer = bytearray(height * width // 8)
-        # print("bytes", len(memoryview(self.buffer)))
         self.framebuf = framebuf.FrameBuffer1(
             memoryview(self.buffer), width, height, framebuf.MONO_HMSB
         )
         self.framebuf.fill(0)
+
         self.width = width
         self.height = height
+
         self.x = x
         self.y = y
-        """
-        print(
-            "creating segment",
-            "x",
-            self.x,
-            "y",
-            self.y,
-            "w",
-            self.width,
-            "h",
-            self.height,
-        )
-        """
+
+        self.pixel_scrolled = 0
+        self.needs_reset = False
 
 
 class SSD1306:
@@ -116,7 +106,7 @@ class SSD1306:
     def invert(self, invert):
         self.write_cmd(SET_NORM_INV | (invert & 1))
 
-    def show(self):
+    def show(self, start_page=0, end_page=7):
         x0 = 0
         x1 = self.width - 1
         if self.width == 64:
@@ -127,13 +117,16 @@ class SSD1306:
         self.write_cmd(x0)
         self.write_cmd(x1)
         self.write_cmd(SET_PAGE_ADDR)
-        self.write_cmd(0)
-        self.write_cmd(self.pages - 1)
+        self.write_cmd(start_page)
+        self.write_cmd(end_page)
         self.write_framebuf()
 
     def merge_framebuff(self, segment):
-        # print("blit at pos", segment.x, segment.y)
         self.framebuf.blit(segment.framebuf, segment.x, segment.y)
+        self.show()
+
+    def reset_zone(self, segment):
+        self.framebuf.fill_rect(segment.x, segment.y, segment.width, segment.height, 0)
 
     def fill(self, col):
         self.framebuf.fill(col)
@@ -147,97 +140,21 @@ class SSD1306:
     def line(self, segment, x2, y2, col=1):
         segment.framebuf.line(0, 0, x2, y2, col)
 
-    def scroll(self, segment, dx, dy):
-        segment.framebuf.scroll(dx, dy)
+    def scroll(self, segment):
+        # We could and dx, dy to change the direction
+        segment.framebuf.scroll(-1, 0)
+        segment.pixel_scrolled += 1
+
+        # If we are done scrolling set reset
+        if segment.pixel_scrolled > segment.width:
+            print("scroll reset")
+            segment.needs_reset = True
 
     def rect(self, segment, w, h, fill=True, col=1):
-        # print("rect:", w, h)
         if fill:
             segment.framebuf.fill_rect(0, 0, w, h, col)
         else:
             segment.framebuf.rect(0, 0, w, h, col)
-
-        """
-    def fill(self, col):
-        self.framebuf.fill(col)
-
-    def pixel(self, x, y, col):
-        self.framebuf.pixel(x, y, col)
-
-    def text(self, string, x, y, col=1):
-        self.framebuf.text(string, x, y, col)
-
-    def line(self, x1, y1, x2, y2, col=1):
-        self.framebuf.line(x1, y1, x2, y2, col)
-
-    def scroll(self, dx, dy):
-        self.framebuf.scroll(dx, dy)
-
-    def rect(self, x, y, w, h, fill=True, col=1):
-        if fill:
-            self.framebuf.fill_rect(x, y, w, h, col)
-        else:
-            self.framebuf.rect(x, y, w, h, col)
-
-    # Does not work, srolling create weird glitchs for non scrolling part of the screen.
-    # Also, you can't have more characters than the lenght of the screen moving making this useless.
-
-    def hw_scroll_off(self):
-        self.write_cmd(SET_HWSCROLL_OFF)  # turn off scroll
-
-    def hw_scroll_h(self, direction=True, start_page=0x00, end_page=0x07):
-        # default to scroll right
-        self.write_cmd(SET_HWSCROLL_OFF)
-        # turn off hardware scroll per SSD1306 datasheet
-        if not direction:
-            self.write_cmd(SET_HWSCROLL_LEFT)
-            self.write_cmd(0x00)  # dummy byte
-            self.write_cmd(start_page)  # start page = page 7
-            self.write_cmd(0x00)  # frequency = 5 frames
-            self.write_cmd(end_page)  # end page = page 0
-        else:
-            self.write_cmd(SET_HWSCROLL_RIGHT)
-            self.write_cmd(0x00)  # dummy byte
-            self.write_cmd(start_page)  # start page = page 0
-            self.write_cmd(0x00)  # frequency = 5 frames
-            self.write_cmd(end_page)  # end page = page 7
-
-        self.write_cmd(0x00)
-        self.write_cmd(0xFF)
-        self.write_cmd(SET_HWSCROLL_ON)  # activate scroll
-
-    # This is for the diagonal scroll, it shows wierd actifacts on the lcd!!
-    def hw_scroll_diag(self, direction=True):   # default to scroll verticle and right
-        self.write_cmd(SET_HWSCROLL_OFF)  # turn off hardware scroll per SSD1306 datasheet
-        if not direction:
-            self.write_cmd(SET_HWSCROLL_VL)
-            self.write_cmd(0x00) # dummy byte
-            self.write_cmd(0x07) # start page = page 7
-            self.write_cmd(0x00) # frequency = 5 frames
-            self.write_cmd(0x00) # end page = page 0
-            self.write_cmd(self.height)
-        else:
-            self.write_cmd(SET_HWSCROLL_VR)
-            self.write_cmd(0x00) # dummy byte
-            self.write_cmd(0x00) # start page = page 0
-            self.write_cmd(0x00) # frequency = 5 frames
-            self.write_cmd(0x07) # end page = page 7
-            self.write_cmd(self.height)
-
-        self.write_cmd(0x00)
-        self.write_cmd(0xff)
-        self.write_cmd(SET_HWSCROLL_ON) # activate scroll
-
-    def scroll_text(sc):
-        sc.set_memory(
-            name="testtest",
-            elem_type="str",
-            content=(0, 2, "123456789ABCDEFGHIJKLM"),
-            update=False,
-        )
-        sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
-        sc.oled.show(start_page=0x02, end_page=0x02)
-    """
 
 
 class SSD1306_I2C(SSD1306):

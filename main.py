@@ -94,25 +94,20 @@ class Weather(Screen_element):
         temp_str = str(self.current_temperature)
         y = 7
         self.sc.set_memory(
-            name="WEATHER_art",
-            elem_type="pixel",
-            content=(0, y, self.pixel_art),
-            update=True,
+            name="WEATHER_art", elem_type="pixel", content=(0, y, self.pixel_art)
         )
         self.sc.set_memory(
-            name="WEATHER_temp", elem_type="str", content=(1, y, temp_str), update=True
+            name="WEATHER_temp", elem_type="str", content=(1, y, temp_str)
         )
         self.sc.set_memory(
             name="WEATHER_temp_type",
             elem_type="pixel",
             content=(1 + len(temp_str), y, "celcius"),
-            update=True,
         )
         self.sc.set_memory(
             name="WEATHER_humidity",
             elem_type="str",
             content=(2 + len(temp_str), y, str(self.current_humidity) + "%"),
-            update=True,
         )
         return result
 
@@ -128,11 +123,7 @@ def update_clock(sc):
         + "%02d" % localtime[5]
     )
     sc.set_memory(
-        name="date",
-        elem_type="str",
-        content=(1, 0, time + " " + date),
-        update=True,
-        delete=True,
+        name="date", elem_type="str", content=(1, 0, time + " " + date), delete=True
     )
 
 
@@ -152,6 +143,12 @@ def main():
             weather.check(now)
         # google.check(now)
         update_clock(sc)
+        sc.set_memory(
+            name="scroll_text",
+            elem_type="str",
+            content=(0, 2, "Hello world"),
+            scroll=True,
+        )
         utime.sleep(const.MAIN_CYCLE_TIME)
 
 
