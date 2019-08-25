@@ -140,16 +140,16 @@ def main():
     print("Running Ayon")
     sc = Screen_Handler()
     ntw = Network(sc, const.NTW_CHECK_TIME)
-    # clock = Clock(ntw, sc, const.CLOCK_TIME_CHECK)
-    # weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
+    clock = Clock(ntw, sc, const.CLOCK_TIME_CHECK)
+    weather = Weather(ntw, sc, const.WEATHER_TIME_CHECK)
     # google = Google(ntw, sc, const.GOOGLE_TIME_CHECK)
 
     # scroll_text(sc)
     while True:
         now = utime.time()
-        # if ntw.check():
-        #    clock.check(now)
-        #    weather.check(now)
+        if ntw.check():
+            clock.check(now)
+            weather.check(now)
         # google.check(now)
         update_clock(sc)
         utime.sleep(const.MAIN_CYCLE_TIME)

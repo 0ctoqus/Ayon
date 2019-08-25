@@ -1,8 +1,10 @@
 # MicroPython SSD1306 OLED driver, I2C and SPI interfaces
+
+import time
 import framebuf
 
-# import utime
 from math import ceil
+
 
 # register definitions
 SET_CONTRAST = const(0x81)
@@ -22,21 +24,16 @@ SET_DISP_CLK_DIV = const(0xD5)
 SET_PRECHARGE = const(0xD9)
 SET_VCOM_DESEL = const(0xDB)
 SET_CHARGE_PUMP = const(0x8D)
-# SET_HWSCROLL_OFF = const(0x2E)
-# SET_HWSCROLL_ON = const(0x2F)
-# SET_HWSCROLL_RIGHT = const(0x26)
-# SET_HWSCROLL_LEFT = const(0x27)
-# SET_HWSCROLL_VR     = const(0x29)
-# SET_HWSCROLL_VL     = const(0x2a)
 
 
-class Element:
+class Segment:
     def __init__(self, x, y, width, height):
+        # crash without is it height if == 2
         width = int(ceil(width / 8.0)) * 8
         height = int(ceil(height / 8.0)) * 8
 
         self.buffer = bytearray(height * width // 8)
-        print("bytes", len(memoryview(self.buffer)))
+        # print("bytes", len(memoryview(self.buffer)))
         self.framebuf = framebuf.FrameBuffer1(
             memoryview(self.buffer), width, height, framebuf.MONO_HMSB
         )
@@ -45,8 +42,9 @@ class Element:
         self.height = height
         self.x = x
         self.y = y
+        """
         print(
-            "creating element",
+            "creating segment",
             "x",
             self.x,
             "y",
@@ -56,23 +54,18 @@ class Element:
             "h",
             self.height,
         )
+        """
 
 
 class SSD1306:
-    def __init__(self, width, height, i2c, addr=0x3C, external_vcc=False):
-        self.i2c = i2c
-        self.addr = addr
-        self.temp = bytearray(2)
-        self.buffer = bytearray(((height // 8) * width) + 1)
-        self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
-        self.framebuf = framebuf.FrameBuffer1(
-            memoryview(self.buffer)[1:], width, height, framebuf.MONO_HMSB
-        )
-
+    def __init__(self, width, height, external_vcc):
         self.width = width
         self.height = height
         self.external_vcc = external_vcc
         self.pages = self.height // 8
+        # Note the subclass must initialize self.framebuf to a framebuffer.
+        # This is necessary because the underlying data buffer is different
+        # between I2C and SPI implementations (I2C needs an extra byte).
         self.poweron()
         self.init_display()
 
@@ -80,7 +73,8 @@ class SSD1306:
         for cmd in (
             SET_DISP | 0x00,  # off
             # address setting
-            SET_MEM_ADDR | 0x00,  # horizontal
+            SET_MEM_ADDR,
+            0x00,  # horizontal
             # resolution and layout
             SET_DISP_START_LINE | 0x00,
             SET_SEG_REMAP | 0x01,  # column addr 127 mapped to SEG0
@@ -122,118 +116,48 @@ class SSD1306:
     def invert(self, invert):
         self.write_cmd(SET_NORM_INV | (invert & 1))
 
-    def show(self, start_page=0, end_page=7):
-        start_column = 0
-        end_column = self.width - 1
+    def show(self):
+        x0 = 0
+        x1 = self.width - 1
         if self.width == 64:
             # displays with width of 64 pixels are shifted by 32
-            start_column += 32
-            end_column += 32
-
-        """Write display buffer to physical display."""
+            x0 += 32
+            x1 += 32
         self.write_cmd(SET_COL_ADDR)
-        self.write_cmd(start_column)
-        self.write_cmd(end_column)
+        self.write_cmd(x0)
+        self.write_cmd(x1)
         self.write_cmd(SET_PAGE_ADDR)
-        self.write_cmd(start_page)  # Page start address. (0 = reset)
-        self.write_cmd(end_page)  # Page end address.
+        self.write_cmd(0)
+        self.write_cmd(self.pages - 1)
+        self.write_framebuf()
 
-        # self.write_framebuf()
-        # tmp_buffer = self.buffer[1:]
-        # for i in range(start_page * 128, (end_page + 1) * 128, 16):
-        #    self.i2c.writeto(self.addr, control + tmp_buffer[i : i + 16])
-        #    utime.sleep(0.02)
-
-        control = bytearray(1)
-        control[0] = 0x40
-        self.i2c.writeto(
-            self.addr,
-            control
-            + self.buffer[1:][start_page * self.width : (end_page + 1) * self.width],
-        )
-
-    def write_cmd(self, cmd):
-        self.temp[0] = 0x80  # Co=1, D/C#=0
-        self.temp[1] = cmd
-        self.i2c.writeto(self.addr, self.temp)
-
-    def write_framebuf(self):
-        # Blast out the frame buffer using a single I2C transaction to support
-        # hardware I2C interfaces.
-        self.i2c.writeto(self.addr, self.buffer)
-
-    def merge_framebuff(self, element):
-        print("blit at pos", element.x, element.y)
-        self.framebuf.blit(element.framebuf, element.x, element.y)
-
-        # control = bytearray(1)
-        # control[0] = 0x40
-        # print("merging element")
-        # print(
-        #    "Initial buffer size =",
-        #    len(self.buffer[1:]),
-        #    "element =",
-        #    len(element.buffer),
-        # )
-        # convertir position en pixel en bytes
-        # for y in range(element.height):
-        #     print(
-        #         "element from", y * (element.width // 8), (y + 1) * (element.width // 8)
-        #     )
-        #     elem_bytes = element.buffer[
-        #         y * (element.width // 8) : (y + 1) * (element.width // 8)
-        #     ]
-        #
-        #     offset = element.y * self.width // 8 + element.x // 8
-        #     start_bytes = self.buffer[1:][:offset]
-        #     end_bytes = self.buffer[1:][offset + len(elem_bytes) :]
-        #
-        #     print(
-        #         offset,
-        #         ":",
-        #         len(start_bytes),
-        #         "+",
-        #         len(elem_bytes),
-        #         "+",
-        #         len(end_bytes),
-        #         "=",
-        #         len(start_bytes + elem_bytes + end_bytes),
-        #         ":",
-        #         offset + len(elem_bytes),
-        #     )
-        #     self.buffer = control + start_bytes + elem_bytes + end_bytes
-        # print("done merging")
+    def merge_framebuff(self, segment):
+        # print("blit at pos", segment.x, segment.y)
+        self.framebuf.blit(segment.framebuf, segment.x, segment.y)
 
     def fill(self, col):
         self.framebuf.fill(col)
 
-    def pixel(self, element, x, y, col):
-        print("pixel:", x, y)
-        element.framebuf.pixel(x, y, col)
+    def pixel(self, segment, x, y, col):
+        segment.framebuf.pixel(x, y, col)
 
-    def text(self, element, string, x, y, col=1):
-        print("text:", string, x, y)
-        element.framebuf.text(string, x, y, col)
+    def text(self, segment, string, col=1):
+        segment.framebuf.text(string, 0, 0, col)
 
-    def line(self, element, x1, y1, x2, y2, col=1):
-        print("line:", x1, y1, x2, y2)
-        element.framebuf.line(x1, y1, x2, y2, col)
+    def line(self, segment, x2, y2, col=1):
+        segment.framebuf.line(0, 0, x2, y2, col)
 
-    def scroll(self, element, dx, dy):
-        print("scroll:", dx, dy)
-        element.framebuf.scroll(dx, dy)
+    def scroll(self, segment, dx, dy):
+        segment.framebuf.scroll(dx, dy)
 
-    def rect(self, element, x, y, w, h, fill=True, col=1):
-        print("rect:", x, y, w, h)
+    def rect(self, segment, w, h, fill=True, col=1):
+        # print("rect:", w, h)
         if fill:
-            element.framebuf.fill_rect(x, y, w, h, col)
+            segment.framebuf.fill_rect(0, 0, w, h, col)
         else:
-            element.framebuf.rect(x, y, w, h, col)
+            segment.framebuf.rect(0, 0, w, h, col)
 
-    def poweron(self):
-        pass
-
-    """
+        """
     def fill(self, col):
         self.framebuf.fill(col)
 
@@ -314,3 +238,34 @@ class SSD1306:
         sc.oled.hw_scroll_h(direction=False, start_page=2, end_page=2)
         sc.oled.show(start_page=0x02, end_page=0x02)
     """
+
+
+class SSD1306_I2C(SSD1306):
+    def __init__(self, width, height, i2c, addr=0x3C, external_vcc=False):
+        self.i2c = i2c
+        self.addr = addr
+        self.temp = bytearray(2)
+        # Add an extra byte to the data buffer to hold an I2C data/command byte
+        # to use hardware-compatible I2C transactions.  A memoryview of the
+        # buffer is used to mask this byte from the framebuffer operations
+        # (without a major memory hit as memoryview doesn't copy to a separate
+        # buffer).
+        self.buffer = bytearray(((height // 8) * width) + 1)
+        self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
+        self.framebuf = framebuf.FrameBuffer1(
+            memoryview(self.buffer)[1:], width, height
+        )
+        super().__init__(width, height, external_vcc)
+
+    def write_cmd(self, cmd):
+        self.temp[0] = 0x80  # Co=1, D/C#=0
+        self.temp[1] = cmd
+        self.i2c.writeto(self.addr, self.temp)
+
+    def write_framebuf(self):
+        # Blast out the frame buffer using a single I2C transaction to support
+        # hardware I2C interfaces.
+        self.i2c.writeto(self.addr, self.buffer)
+
+    def poweron(self):
+        pass

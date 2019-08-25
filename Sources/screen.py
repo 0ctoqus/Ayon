@@ -3,8 +3,8 @@ import machine
 import utime
 
 # Local libs
-from ssd1306 import SSD1306
-from ssd1306 import Element
+from ssd1306 import Segment
+from ssd1306 import SSD1306_I2C
 import consts as const
 
 # import uasyncio as asyncio
@@ -32,7 +32,7 @@ class Screen_Handler:
         # self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
 
         print("OLED setup")
-        self.oled = SSD1306(self.screen_width, self.screen_height, self.i2c)
+        self.oled = SSD1306_I2C(self.screen_width, self.screen_height, self.i2c)
         self.oled.fill(0)
         self.memory_index = {}
 
@@ -142,14 +142,7 @@ class Screen_Handler:
         self.set_memory(
             name="line_top",
             elem_type="rect",
-            content=(
-                0,
-                self.height_to_pixel(2) - 7,
-                self.width_to_pixel(16),
-                self.height_to_pixel(2) - 5,
-                True,
-                1,
-            ),
+            content=(0, self.height_to_pixel(2) - 7, self.screen_width, 2, True, 1),
             update=True,
         )
 
@@ -157,14 +150,7 @@ class Screen_Handler:
         self.set_memory(
             name="line_bottom",
             elem_type="rect",
-            content=(
-                0,
-                self.height_to_pixel(6) + 5,
-                self.width_to_pixel(16),
-                self.height_to_pixel(6) + 7,
-                True,
-                1,
-            ),
+            content=(0, self.height_to_pixel(6) + 5, self.screen_width, 2, True, 1),
             update=True,
         )
 
@@ -175,19 +161,15 @@ class Screen_Handler:
         return int(self.screen_height / self.screen_spacing * y)
 
     def pixel_to_width(self, x):
-        # if x % 8 == 0 and x > 0:
-        #    x -= 1
         return int(x / (self.screen_width / self.screen_columns))
 
     def pixel_to_height(self, y):
-        # if y % 8 == 0 and y > 0:
-        #    y -= 1
         return int(y / (self.screen_height / self.screen_spacing))
 
     # def reset_zone(self, x1, y1, x2, y2):
-    #    element = Element(x1, y1, x2 - x1, y2 - y1)
-    #    self.oled.rect(element, x1, y1, x2 - x1, y2 - y1, True, 0)
-    #    self.oled.merge_framebuff(element)
+    #    segment = Segment(x1, y1, x2 - x1, y2 - y1)
+    #    self.oled.rect(segment, x1, y1, x2 - x1, y2 - y1, True, 0)
+    #    self.oled.merge_framebuff(segment)
 
     # x, y, string
     def display_str(self, elem):
@@ -200,9 +182,9 @@ class Screen_Handler:
 
         # self.reset_zone(x1, y1, x2, y2)
 
-        element = Element(x1, y1, x2 - x1, 8)
-        self.oled.text(element, string, 0, 0)
-        self.oled.merge_framebuff(element)
+        segment = Segment(x1, y1, x2 - x1, y2 - y1)
+        self.oled.text(segment, string)
+        self.oled.merge_framebuff(segment)
         return (x1, y1, x2, y2)
 
     # x, y, content_name
@@ -214,36 +196,35 @@ class Screen_Handler:
         # self.reset_zone(x1, y1, len(art[0]), len(art))
 
         y2 = 0
-        element = Element(x1, y1, len(art[0]), len(art))
+        segment = Segment(x1, y1, len(art[0]), len(art))
         for pixel_str in self.pixel_art[content_name]:
             x2 = 0
             for pixel in pixel_str:
                 if pixel == "1":
-                    self.oled.pixel(element, x2, y2, 1)
+                    self.oled.pixel(segment, x2, y2, 1)
                 x2 += 1
             y2 += 1
-        self.oled.merge_framebuff(element)
+        self.oled.merge_framebuff(segment)
         return (x1, y1, x2, y2)
 
     # x1, y1, x2, y2
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
         # self.reset_zone(x1, y1, x2, y2)
-        element = Element(x1, y1, x2 - x1, y2 - y1)
-        self.oled.line(element, 0, 0, x2 - x1, y2 - y1)
-        self.oled.merge_framebuff(element)
+        segment = Segment(x1, y1, x2 - x1, y2 - y1)
+        self.oled.line(segment, x2, y2)
+        self.oled.merge_framebuff(segment)
         # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
         return (x1, y1, x2, y2)
 
-    # x1, y1, x2, y2, fill, col
+    # x, y, width, height, fill, col
     def display_rect(self, elem):
-        x1, y1, x2, y2, fill, col = elem
+        x, y, width, height, fill, col = elem
         # self.reset_zone(x1, y1, x2, y2)
-        element = Element(x1, y1, x2 - x1, y2 - y1)
-        self.oled.rect(element, 0, 0, x2 - x1, y2 - y1, fill, col)
-        self.oled.merge_framebuff(element)
-        # We might change it for x1 to x2 and y1 to y2 to get a area and not a point
-        return (x1, y1, x2, y2)
+        segment = Segment(x, y, width, height)
+        self.oled.rect(segment, width, height, fill, col)
+        self.oled.merge_framebuff(segment)
+        return (x, y, x + width, y + height)
 
     def set_memory(self, name, elem_type=None, content=None, update=True, delete=False):
         # Delete element
@@ -252,37 +233,33 @@ class Screen_Handler:
             # self.reset_zone(x1, y1, x2, y2)
             del self.memory_index[name]
         if elem_type is not None and content is not None:
-            # elems = tuple(list(content))
             x1, y1, x2, y2 = self.displayables[elem_type](content)
             self.memory_index[name] = (x1, y1, x2, y2)
             if update:
-                self.oled.show(
-                    start_page=self.pixel_to_height(y1),
-                    end_page=self.pixel_to_height(y2),
-                )
+                self.oled.show()
 
-    # def get_async(self):
-    #     while True:
-    #         # print("screen update")
-    #         # Set time
-    #         localtime = utime.localtime()
-    #         date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
-    #         time = (
-    #             "%02d" % localtime[3]
-    #             + ":"
-    #             + "%02d" % localtime[4]
-    #             + ":"
-    #             + "%02d" % localtime[5]
-    #         )
-    #         self.set_memory(
-    #             name="date",
-    #             elem_type="str",
-    #             content=(1, 0, time + " " + date),
-    #             update=True,
-    #             delete=True,
-    #         )
-    #         # self.oled.show()
-    #         utime.sleep(const.MAIN_CYCLE_TIME)
+        # def get_async(self):
+        #     while True:
+        #         # print("screen update")
+        #         # Set time
+        #         localtime = utime.localtime()
+        #         date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+        #         time = (
+        #             "%02d" % localtime[3]
+        #             + ":"
+        #             + "%02d" % localtime[4]
+        #             + ":"
+        #             + "%02d" % localtime[5]
+        #         )
+        #         self.set_memory(
+        #             name="date",
+        #             elem_type="str",
+        #             content=(1, 0, time + " " + date),
+        #             update=True,
+        #             delete=True,
+        #         )
+        #         # self.oled.show()
+        #         utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Screen_element:
