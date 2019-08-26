@@ -1,5 +1,5 @@
 # Main
-MAIN_CYCLE_TIME = 0.1
+MAIN_CYCLE_TIME = 0.05
 
 # Wifi
 NTW_LIST = {"SSID1": "password1", "SSID2": "password2"}

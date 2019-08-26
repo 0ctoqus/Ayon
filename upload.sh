@@ -1,9 +1,9 @@
-#!/bin/bash
-
+echo "Deleting file"
+ampy rmdir Sources
 echo "Uploading files"
-for filename in Sources/*.py; do
-	basename=$(basename "$filename")
-	echo "$basename"
-	ampy put "$filename"
-	sleep 1
-done
+sleep 1
+ampy put Sources
+#sleep 1
+#echo "Running"
+#ampy run main.py
+echo "Done"

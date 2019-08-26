@@ -3,32 +3,36 @@ import machine
 import utime
 
 # Local libs
-import ssd1306
-import uasyncio as asyncio
-
-# Local scripts
+from ssd1306 import Segment
+from ssd1306 import SSD1306_I2C
 import consts as const
+
+# import uasyncio as asyncio
 
 
 class Screen_Handler:
     def __init__(self):
         # Constants
+        print("Init screen Screen_Handler")
         self.screen_columns = 16
         self.screen_spacing = 8
         self.screen_width = 128
         self.screen_height = 64
         self.char_width = int(self.screen_width / self.screen_columns)
-        self.char_height = int(self.screen_height / self.screen_spacing)
+        self.char_height = int(self.screen_height / self.screen_spacing) - 1
 
+        print("I2C setup")
         # For small board uncomment this
-        # pin16 = machine.Pin(16, machine.Pin.OUT)
-        # pin16.value(1) # set reset Pin hight
-        # machine.Pin(16, machine.Pin.OUT).value(1)
-        # self.i2c = machine.I2C(scl=machine.Pin(15), sda=machine.Pin(4))
+        pin16 = machine.Pin(16, machine.Pin.OUT)
+        # set reset Pin hight
+        pin16.value(1)
+        machine.Pin(16, machine.Pin.OUT).value(1)
+        self.i2c = machine.I2C(scl=machine.Pin(15), sda=machine.Pin(4))
 
-        self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
+        # self.i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
 
-        self.oled = ssd1306.SSD1306_I2C(self.screen_width, self.screen_height, self.i2c)
+        print("OLED setup")
+        self.oled = SSD1306_I2C(self.screen_width, self.screen_height, self.i2c)
         self.oled.fill(0)
         self.memory_index = {}
 
@@ -134,88 +138,149 @@ class Screen_Handler:
             ],
         }
 
+        # Top line
+        self.set_memory(
+            name="line_top",
+            elem_type="rect",
+            content=(0, self.height_to_pixel(2) - 7, self.screen_width, 2, True, 1),
+        )
+
+        # Bottom line
+        self.set_memory(
+            name="line_bottom",
+            elem_type="rect",
+            content=(0, self.height_to_pixel(6) + 5, self.screen_width, 2, True, 1),
+        )
+
     def width_to_pixel(self, x):
         return int(self.screen_width / self.screen_columns * x)
 
     def height_to_pixel(self, y):
         return int(self.screen_height / self.screen_spacing * y)
 
-    def reset_zone(self, x1, y1, x2, y2):
-        self.oled.rect(x1, y1, x2 - x1, y2 - y1, True, 0)
+    def pixel_to_width(self, x):
+        return int(x / (self.screen_width / self.screen_columns))
 
+    def pixel_to_height(self, y):
+        return int(y / (self.screen_height / self.screen_spacing))
+
+    # x, y, string
     def display_str(self, elem):
-        x1, y1, string = elem
-        # print(string, " | Before ", x1, y2)
-        x1 = self.width_to_pixel(x1)
-        # print(string, " | After ", x1, y2)
-        y1 = self.height_to_pixel(y1)
+        x, y, string = elem
+        x1 = self.width_to_pixel(x)
+        y1 = self.height_to_pixel(y)
         x2 = (len(string) + 1) * self.char_width
         y2 = y1 + self.char_height
-        # print(x1, y1, x2, y2)
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.text(string, x1, y1)
-        return (x1, y1, x2, y2)
 
+        segment = Segment(x1, y1, x2 - x1, y2 - y1)
+        self.oled.text(segment, string)
+        return segment
+
+    # x, y, content_name
     def display_pixel(self, elem):
-        x1, y1, content_name = elem
-        x1 = self.width_to_pixel(x1)
-        y1 = self.height_to_pixel(y1)
+        x, y, content_name = elem
+        x1 = self.width_to_pixel(x)
+        y1 = self.height_to_pixel(y)
         art = self.pixel_art[content_name]
-        self.reset_zone(x1, y1, len(art[0]), len(art))
-        y2 = y1
+
+        y2 = 0
+        segment = Segment(x1, y1, len(art[0]), len(art))
         for pixel_str in self.pixel_art[content_name]:
-            x2 = x1
+            x2 = 0
             for pixel in pixel_str:
                 if pixel == "1":
-                    self.oled.pixel(x2, y2, 1)
+                    self.oled.pixel(segment, x2, y2, 1)
                 x2 += 1
             y2 += 1
-        return (x1, y1, x2, y2)
+        return segment
 
+    # x1, y1, x2, y2
     def display_line(self, elem):
         x1, y1, x2, y2 = elem
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.line(x1, y1, x2, y2)
-        return (x1, y1, x2, y2)
+        segment = Segment(x1, y1, x2 - x1, y2 - y1)
+        self.oled.line(segment, x2, y2)
+        return segment
 
+    # x, y, width, height, fill, col
     def display_rect(self, elem):
-        x1, y1, x2, y2, fill, col = elem
-        self.reset_zone(x1, y1, x2, y2)
-        self.oled.rect(x1, y1, x2 - x1, y2 - y1, fill, col)
-        return (x1, y1, x2, y2)
+        x, y, width, height, fill, col = elem
+        segment = Segment(x, y, width, height)
+        self.oled.rect(segment, width, height, fill, col)
+        return segment
 
-    def set_memory(self, name, elem_type=None, content=None, delete=False):
-        # Delete element
-        if delete and name in self.memory_index:
-            x1, y1, x2, y2 = self.memory_index[name]
-            self.reset_zone(x1, y1, x2, y2)
-            del self.memory_index[name]
+    def set_memory(
+        self, name, elem_type=None, content=None, scroll=False, delete=False
+    ):
+        # Reset zone and delete element if needed
+        if (delete or scroll) and name in self.memory_index:
+            self.oled.reset_zone(self.memory_index[name])
+            if delete or self.memory_index[name].needs_reset:
+                del self.memory_index[name]
+
+        # Create element if needed and display
         if elem_type is not None and content is not None:
-            elems = tuple(list(content))
-            self.memory_index[name] = self.displayables[elem_type](content)
+            if name not in self.memory_index:
+                segment = self.displayables[elem_type](content)
+            else:
+                segment = self.memory_index[name]
+            self.oled.merge_framebuff(segment)
+            if scroll:
+                self.oled.scroll(segment)
+            self.memory_index[name] = segment
 
-    def update_display(self):
-        self.oled.show()
-
-    async def get_async(self):
-        while True:
-            self.update_display()
-            await asyncio.sleep_ms(int(const.MAIN_CYCLE_TIME * 1000))
+        # def get_async(self):
+        #     while True:
+        #         # print("screen update")
+        #         # Set time
+        #         localtime = utime.localtime()
+        #         date = " " + "%02d" % localtime[2] + "/" + "%02d" % localtime[1]
+        #         time = (
+        #             "%02d" % localtime[3]
+        #             + ":"
+        #             + "%02d" % localtime[4]
+        #             + ":"
+        #             + "%02d" % localtime[5]
+        #         )
+        #         self.set_memory(
+        #             name="date",
+        #             elem_type="str",
+        #             content=(1, 0, time + " " + date),
+        #             update=True,
+        #             delete=True,
+        #         )
+        #         # self.oled.show()
+        #         utime.sleep(const.MAIN_CYCLE_TIME)
 
 
 class Screen_element:
     def __init__(self, ntw, sc, max_time_check):
         self.ntw = ntw
         self.sc = sc
-        self.last_time_check = 0
+        self.next_time_check = 0
         self.time_diff = 0
         self.max_time_check = max_time_check
 
-    async def get_async(self):
-        while True:
-            if self.ntw.connected:
-                self.get()
-                wait_time = self.max_time_check
+    # async def get_async(self):
+    #    while True:
+    #        if self.ntw.connected:
+    #            self.get()
+    #            wait_time = self.max_time_check
+    #        else:
+    #            wait_time = const.MAIN_CYCLE_TIME
+    #        await asyncio.sleep(wait_time)
+
+    # def get_async(self):
+    #     while True:
+    #         if self.ntw.connected:
+    #             self.get()
+    #             wait_time = self.max_time_check
+    #         else:
+    #             wait_time = const.MAIN_CYCLE_TIME
+    #         utime.sleep(wait_time)
+
+    def check(self, now):
+        if self.next_time_check - now < 0:  # and self.ntw.connected:
+            if self.get():
+                self.next_time_check = utime.time() + self.max_time_check
             else:
-                wait_time = const.MAIN_CYCLE_TIME
-            await asyncio.sleep(wait_time)
+                self.next_time_check = utime.time() + const.MAIN_CYCLE_TIME * 10

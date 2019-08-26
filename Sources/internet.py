@@ -5,10 +5,8 @@ import ujson
 import utime
 
 # Local libs
-import uasyncio as asyncio
-
-# Local scripts
-from screen import Screen_element
+# import uasyncio as asyncio
+# from screen import Screen_element
 import consts as const
 
 
@@ -23,7 +21,7 @@ class Network:
         self.trying_to_connect = False
         self.ssid = None
         self.pswd = None
-        self.connected = False
+        # self.connected = False
 
     def request(self, request_type, url, data=None, headers={}):
         if self.wlan.isconnected():
@@ -36,7 +34,11 @@ class Network:
                 print(e)
                 response = None
             if response is not None:
-                json = response.json()
+                try:
+                    json = response.json()
+                except:
+                    print("error in json")
+                    json = None
                 response.close()
                 return json
         print("request error")
@@ -46,7 +48,6 @@ class Network:
         self.sc.set_memory(
             name="connection_status", elem_type="pixel", content=(0, 0, "cross")
         )
-        self.sc.update_display()
         print("connecting to:", self.ssid, " with password ", self.pswd)
         self.wlan.connect(self.ssid, self.pswd)
 
@@ -65,7 +66,7 @@ class Network:
             print("Available wifi ", available_wifi)
             self.ssid = max(available_wifi, key=lambda wifi: wifi[1])[0]
             self.pswd = const.NTW_LIST[self.ssid]
-            print("Select wifi ", self.ssid)
+            print("Select wifi", self.ssid)
         else:
             print("No wifi available")
             self.ssid = None
@@ -95,14 +96,16 @@ class Network:
 
         return self.wlan.isconnected()
 
-    def get(self):
-        self.connected = self.check_connection()
-
-    async def get_async(self):
+    def get_async(self):
         while True:
-            if not self.connected and self.get():
-                wait_time = self.max_time_check * 1000
-                print("Connection set")
+            if self.check_connection():
+                wait_time = self.max_time_check
             else:
-                wait_time = const.MAIN_CYCLE_TIME * 1000
-            await asyncio.sleep_ms(int(wait_time))
+                wait_time = const.MAIN_CYCLE_TIME
+            utime.sleep(wait_time)
+
+    def check(self):
+        connected = self.check_connection()
+        if not connected:
+            print("getting ntw")
+        return connected
