@@ -143,7 +143,6 @@ class Screen_Handler:
             name="line_top",
             elem_type="rect",
             content=(0, self.height_to_pixel(2) - 7, self.screen_width, 2, True, 1),
-            # update=True,
         )
 
         # Bottom line
@@ -151,7 +150,6 @@ class Screen_Handler:
             name="line_bottom",
             elem_type="rect",
             content=(0, self.height_to_pixel(6) + 5, self.screen_width, 2, True, 1),
-            # update=True,
         )
 
     def width_to_pixel(self, x):
