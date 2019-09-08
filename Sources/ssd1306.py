@@ -134,8 +134,8 @@ class SSD1306:
     def pixel(self, segment, x, y, col):
         segment.framebuf.pixel(x, y, col)
 
-    def text(self, segment, string, col=1):
-        segment.framebuf.text(string, 0, 0, col)
+    def text(self, segment, string, x, y, col=1):
+        segment.framebuf.text(string, x, y, col)
 
     def line(self, segment, x2, y2, col=1):
         segment.framebuf.line(0, 0, x2, y2, col)

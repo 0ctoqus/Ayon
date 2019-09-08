@@ -15,6 +15,8 @@ class Network:
         # Screen_element.__init__(self, None, sc, max_time_check)
         self.sc = sc
         self.max_time_check = max_time_check
+        self.next_time_check = 0
+
         self.ip = None
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
@@ -45,9 +47,6 @@ class Network:
         return None
 
     def connect(self):
-        self.sc.set_memory(
-            name="connection_status", elem_type="pixel", content=(0, 0, "cross")
-        )
         print("connecting to:", self.ssid, " with password ", self.pswd)
         self.wlan.connect(self.ssid, self.pswd)
 
@@ -55,11 +54,14 @@ class Network:
         available_wifi = []
 
         # Scan for available networks and only keep known ones
-        for wifi in self.wlan.scan():
-            ssid = wifi[0].decode("utf-8")
-            signal_strenght = wifi[3]
-            if ssid in const.NTW_LIST:
-                available_wifi.append((ssid, signal_strenght))
+        try:
+            for wifi in self.wlan.scan():
+                ssid = wifi[0].decode("utf-8")
+                signal_strenght = wifi[3]
+                if ssid in const.NTW_LIST:
+                    available_wifi.append((ssid, signal_strenght))
+        except RuntimeError:
+            return None
 
         # Only keep the one with the best signal
         if len(available_wifi) > 0:
@@ -74,9 +76,14 @@ class Network:
 
         return self.ssid
 
-    def check_connection(self):
+    def check_connection(self, now):
         # Check if we have to check for connection
-        if not self.wlan.isconnected() or self.trying_to_connect:
+        if (
+            self.next_time_check <= now
+            and not self.wlan.isconnected()
+            or self.trying_to_connect
+        ):
+            self.next_time_check = now + self.max_time_check
 
             # If not connected try connecting
             if not self.wlan.isconnected() and not self.trying_to_connect:
@@ -93,6 +100,10 @@ class Network:
                     name="connection_status", elem_type="pixel", content=(0, 0, "check")
                 )
                 self.trying_to_connect = False
+            else:
+                self.sc.set_memory(
+                    name="connection_status", elem_type="pixel", content=(0, 0, "cross")
+                )
 
         return self.wlan.isconnected()
 
@@ -104,8 +115,5 @@ class Network:
                 wait_time = const.MAIN_CYCLE_TIME
             utime.sleep(wait_time)
 
-    def check(self):
-        connected = self.check_connection()
-        if not connected:
-            print("getting ntw")
-        return connected
+    # def check(self, now):
+    #    return self.check_connection(now)

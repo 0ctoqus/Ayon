@@ -165,19 +165,24 @@ class Screen_Handler:
         return int(y / (self.screen_height / self.screen_spacing))
 
     # x, y, string
-    def display_str(self, elem):
+    def display_str(self, elem, scroll):
         x, y, string = elem
-        x1 = self.width_to_pixel(x)
-        y1 = self.height_to_pixel(y)
-        x2 = (len(string) + 1) * self.char_width
-        y2 = y1 + self.char_height
+        x = self.width_to_pixel(x)
+        y = self.height_to_pixel(y)
 
-        segment = Segment(x1, y1, x2 - x1, y2 - y1)
-        self.oled.text(segment, string)
+        width = self.char_width * (len(string) + 1)
+        height = y + self.char_height
+
+        if scroll:
+            segment = Segment(x, y, width * 2, height)
+            self.oled.text(segment, string, width, 0)
+        else:
+            segment = Segment(x, y, width, height)
+            self.oled.text(segment, string, 0, 0)
         return segment
 
     # x, y, content_name
-    def display_pixel(self, elem):
+    def display_pixel(self, elem, scroll):
         x, y, content_name = elem
         x1 = self.width_to_pixel(x)
         y1 = self.height_to_pixel(y)
@@ -195,14 +200,14 @@ class Screen_Handler:
         return segment
 
     # x1, y1, x2, y2
-    def display_line(self, elem):
+    def display_line(self, elem, scroll):
         x1, y1, x2, y2 = elem
         segment = Segment(x1, y1, x2 - x1, y2 - y1)
         self.oled.line(segment, x2, y2)
         return segment
 
     # x, y, width, height, fill, col
-    def display_rect(self, elem):
+    def display_rect(self, elem, scroll):
         x, y, width, height, fill, col = elem
         segment = Segment(x, y, width, height)
         self.oled.rect(segment, width, height, fill, col)
@@ -220,9 +225,12 @@ class Screen_Handler:
         # Create element if needed and display
         if elem_type is not None and content is not None:
             if name not in self.memory_index:
-                segment = self.displayables[elem_type](content)
+                # Create segment
+                segment = self.displayables[elem_type](content, scroll)
             else:
+                # Load segment
                 segment = self.memory_index[name]
+            # print("segment", name, segment.width, segment.height, segment.x, segment.y)
             self.oled.merge_framebuff(segment)
             if scroll:
                 self.oled.scroll(segment)
@@ -280,7 +288,9 @@ class Screen_element:
 
     def check(self, now):
         if self.next_time_check - now < 0:  # and self.ntw.connected:
-            if self.get():
-                self.next_time_check = utime.time() + self.max_time_check
-            else:
-                self.next_time_check = utime.time() + const.MAIN_CYCLE_TIME * 10
+            # if self.get():
+            #    self.next_time_check = utime.time() + self.max_time_check
+            # else:
+            #    self.next_time_check = utime.time() + const.MAIN_CYCLE_TIME * 10
+            self.get()
+            self.next_time_check = utime.time() + self.max_time_check
